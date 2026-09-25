@@ -1,0 +1,27 @@
+# Local configuration and credentials (commit examples only).
+.env
+.env.*
+!.env.example
+cloud.env
+cloud.env.*
+!cloud.env.example
+.azure/
+.secrets/
+*.pem
+*.key
+*.pfx
+*.p12
+
+# Python environments and caches.
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+
+# Temporary and local operating-system files.
+*.log
+*.tmp
+.DS_Store
+Thumbs.db
