@@ -5,8 +5,8 @@ keeps the numbers checkable against a hand-computed example in the tests, which
 is the independent check the shared evidence protocol asks for when a result
 depends on a calculation.
 
-Why not accuracy alone: the evaluation set is 62.7% negative
-(reports/P02-T02-evaluation-dataset.md), so always answering "negative" already
+Why not accuracy alone: the evaluation set is 62.7% negative, so always
+answering "negative" already
 scores 0.627. Macro-F1 weights every class equally, so a model that ignores the
 two smaller classes cannot hide behind the majority one.
 """

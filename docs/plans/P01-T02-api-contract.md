@@ -129,7 +129,7 @@ Authorization: Bearer <service-token>
 
 ### เพดานความยาวข้อความ — ล็อกแล้ว 2026-10-07
 
-ยืนยันจาก tokenizer และ model revision `3216a57f2a0d9c45a2e6c20157c20c49fb4bf9c7` ที่ P02 ใช้จริง · หลักฐานและวิธีทดลองอยู่ใน [reports/P02-T03-text-length-cap.md](../../reports/P02-T03-text-length-cap.md)
+ยืนยันจาก tokenizer และ model revision `3216a57f2a0d9c45a2e6c20157c20c49fb4bf9c7` ที่ P02 ใช้จริง · หลักฐานและวิธีทดลองอยู่ใน [reports/P02-evidence.md ส่วนที่ 3](../../reports/P02-evidence.md)
 
 | รายการ | ค่าที่ล็อก |
 |---|---|

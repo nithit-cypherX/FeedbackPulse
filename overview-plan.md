@@ -60,11 +60,11 @@
 
 ดู [P02 phase plan](docs/plans/P02-model-pipeline.md) · เจ้าของงาน: คนที่ 1
 
-- `model_version` ที่ใช้งาน: `sentiment-6e7ff9fbc17c-32855c02` พร้อม lineage ใน `reports/registry/`
-- ผล evaluation บน 14,640 แถว: **accuracy 0.8100 · macro-F1 0.7606** ([รายงาน](reports/P02-T05-evaluation.md))
+- `model_version` ที่ใช้งาน: `sentiment-6e7ff9fbc17c-850de906` พร้อม lineage ใน `reports/registry/` · run ID `run-20261007T171530Z-e49706`
+- ผล evaluation บน 14,640 แถว: **accuracy 0.8100 · macro-F1 0.7606** ([หลักฐาน ส่วนที่ 2](reports/P02-evidence.md))
 
 **การส่งต่องาน:**
-- **คนที่ 2 เริ่ม P03 ได้แล้ว** — อ่าน [interface ที่ล็อกไว้](reports/P02-T04-inference-interface.md) และ [การตัดสินที่เก็บ artifact](reports/P02-T10-artifact-storage.md) · เพดานข้อความอยู่ใน [P01-T02 §7](docs/plans/P01-T02-api-contract.md)
-- **คนที่ 3 ต้องอ่าน** [P02-T10 ส่วนที่ 5](reports/P02-T10-artifact-storage.md) — การสาธิต failure เปลี่ยนวิธี เพราะ artifact อยู่ใน image ไม่มี blob ให้ลบ
+- **คนที่ 2 เริ่ม P03 ได้แล้ว** — อ่าน [interface ที่ล็อกไว้ (ส่วนที่ 9)](reports/P02-evidence.md) และ [การตัดสินที่เก็บ artifact (ส่วนที่ 7)](reports/P02-evidence.md) · เพดานข้อความอยู่ใน [P01-T02 §7](docs/plans/P01-T02-api-contract.md)
+- **คนที่ 3 ต้องอ่าน** [หลักฐาน ส่วนที่ 7](reports/P02-evidence.md) — การสาธิต failure เปลี่ยนวิธี เพราะ artifact อยู่ใน image ไม่มี blob ให้ลบ
 
 ยังไม่ได้พัฒนา API สร้าง Azure resource หรือ deploy อะไร — ทั้งหมดอยู่ใน P03–P04

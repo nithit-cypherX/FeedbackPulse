@@ -12,8 +12,8 @@ string are supplied by the caller.
 from dataclasses import dataclass
 
 # Number of RoBERTa position slots reserved because of padding_idx, so the usable
-# sequence length is max_position_embeddings - 2. Verified by experiment in
-# reports/P02-T03-text-length-cap.md: total length 512 runs, 513 raises.
+# sequence length is max_position_embeddings - 2. Verified by experiment:
+# total length 512 runs, 513 raises.
 _POSITION_OFFSET = 2
 
 
@@ -74,7 +74,7 @@ class SentimentClassifier:
         self._max_content_tokens = max_total - self._special_tokens
 
         # The upstream repo ships no tokenizer_config.json, so this attribute
-        # arrives as a sentinel of ~1e30 (reports/P02-T01-model-provenance.md).
+        # arrives as a sentinel of ~1e30.
         # Anything comparing a length against it would conclude nothing is ever
         # too long. Setting it keeps a tokenizer taken from this object honest,
         # while the single source of the number stays the config above.
@@ -115,7 +115,7 @@ class SentimentClassifier:
 
     # ponytail: one text per call; ceiling: throughput of a single forward
     # pass per text, measured at 51ms for a short text and 184ms at the token
-    # limit in reports/P02-T09-load-and-memory.md; revisit when: a caller needs
+    # limit; revisit when: a caller needs
     # more throughput than that, such as an evaluation run outgrowing a
     # tolerable wall time; upgrade: add a batched method here rather than
     # tokenising anywhere else, so the single prediction path stays single.

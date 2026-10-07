@@ -7,9 +7,8 @@ tokenising here, so the numbers come from the same path the API will serve
 Run with:  PYTHONPATH=src uv run python -m feedbackpulse.evaluate
 
 `src/` is not an installed package, so the path is supplied the same way the
-container does it (PYTHONPATH=/app/src), per the interface decision recorded in
-reports/P02-T04-inference-interface.md. The pytest `pythonpath` setting only
-covers the test run, not this module.
+container does it (PYTHONPATH=/app/src), per the locked interface decision.
+The pytest `pythonpath` setting only covers the test run, not this module.
 """
 
 import hashlib

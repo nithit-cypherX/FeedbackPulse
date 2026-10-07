@@ -4,8 +4,8 @@ Separated from `inference` so the core classifier never downloads anything or
 reads configuration itself, per the core / configuration / cloud-adapter split
 agreed in docs/plans/P01-T03-system-structure.md section 4.
 
-The revision and file list are the ones verified in
-reports/P02-T01-model-provenance.md. Changing either invalidates that report.
+The revision and file list are the ones already verified against the pinned
+model. Changing either invalidates that verification.
 """
 
 from pathlib import Path

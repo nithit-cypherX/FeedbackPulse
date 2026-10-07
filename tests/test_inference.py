@@ -1,8 +1,8 @@
 """Behaviour the API and the evaluation step both depend on.
 
-The limits asserted here are the ones recorded in
-reports/P02-T03-text-length-cap.md for the pinned revision. If a test fails
-after changing the revision, the recorded limit is what needs rechecking.
+The limits asserted here are the ones already verified for the pinned
+revision. If a test fails after changing the revision, these are what need
+rechecking.
 """
 
 import pytest
@@ -18,7 +18,6 @@ from feedbackpulse.model_files import ensure_model_files
 
 MODEL_VERSION = "test-only-version"
 
-# From reports/P02-T01-model-provenance.md and P02-T03-text-length-cap.md.
 EXPECTED_LABELS = ("negative", "neutral", "positive")
 EXPECTED_MAX_CONTENT_TOKENS = 510
 

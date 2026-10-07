@@ -1,8 +1,8 @@
 """Locate and verify the pinned evaluation dataset.
 
 Mirrors `model_files` so both pinned inputs are declared in one place each. The
-values are the ones recorded in reports/P02-T02-evaluation-dataset.md; a hash
-mismatch means the evaluation set changed and that report no longer applies.
+values are the ones already verified against the pinned dataset; a hash
+mismatch means the evaluation set changed.
 """
 
 import csv

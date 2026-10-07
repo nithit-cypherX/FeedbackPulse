@@ -25,9 +25,7 @@ def test_untracked_config_counts():
 
 
 def test_result_and_report_files_do_not_count():
-    status = (
-        " M reports/P02-T05-evaluation-result.json\n?? reports/P02-T05-evaluation.md"
-    )
+    status = " M reports/P02-T05-evaluation-result.json\n?? reports/P02-evidence.md"
     assert uncommitted_inputs(status) == []
 
 

@@ -23,8 +23,7 @@ from feedbackpulse.inference import SentimentClassifier
 ARTIFACT_ROOT = Path("artifacts")
 
 # Copied byte for byte from the pinned revision so their hashes still match the
-# upstream ones recorded in reports/P02-T01-model-provenance.md. Only the
-# weights are transformed; see WEIGHTS_FILE below.
+# upstream ones. Only the weights are transformed; see WEIGHTS_FILE below.
 VERBATIM_FILES = (
     "config.json",
     "vocab.json",
