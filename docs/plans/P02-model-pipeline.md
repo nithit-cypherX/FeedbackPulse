@@ -2,13 +2,13 @@
 
 - แผนหลัก: [Overview plan](../../overview-plan.md) · ขอบเขตโครงการ: [Proposal](../../PROPOSAL.md)
 - ข้อตกลงที่ต้องทำตาม: [P01-T02 API contract](P01-T02-api-contract.md) · [P01-T03 System structure](P01-T03-system-structure.md)
-- สถานะ P02: `in_progress` — T01–T05 และ T11 `done` · T06–T10 `planned`
+- สถานะ P02: `in_progress` — T01–T06 และ T11 `done` · T07–T10 `planned`
 - เจ้าของ: คนที่ 1 — Model และ evaluation (ตาม [overview](../../overview-plan.md))
 - อัปเดต: 2026-10-07
 
 **การเปลี่ยนอำนาจตัดสินใจ (ผู้ใช้สั่งเมื่อ 2026-10-07):** เรื่องที่แผนเดิมเขียนว่า *รอมติทีม* หรือ *รอคนที่ 2 ยืนยัน* เปลี่ยนเป็น **คนที่ 1 ตัดสินเอง แล้วคนที่ 2 รับไปทำต่อโดยอิงการตัดสินนี้** · กระทบ T04, T10 และ T11 · บันทึกไว้เพื่อให้เห็นว่าเป็นการเปลี่ยนขอบเขตที่ได้รับอนุญาต ไม่ใช่การลดเกณฑ์เพื่อปิด task · **เกณฑ์ทางเทคนิคอื่นไม่เปลี่ยน** — task ที่ยังตรวจไม่ได้ก็ยังปิดไม่ได้
 
-ไฟล์นี้เป็น **แผนของ phase P02** พร้อมบันทึกความคืบหน้าจริง · **เสร็จแล้ว 6 task:** [T01](../../reports/P02-T01-model-provenance.md), [T02](../../reports/P02-T02-evaluation-dataset.md), [T03](../../reports/P02-T03-text-length-cap.md), [T04](../../reports/P02-T04-inference-interface.md), [T05](../../reports/P02-T05-evaluation.md) และ T11 · T06–T10 ยังเป็น `planned` และช่อง "ผลจริง" ยังเป็น *ยังไม่รัน*
+ไฟล์นี้เป็น **แผนของ phase P02** พร้อมบันทึกความคืบหน้าจริง · **เสร็จแล้ว 7 task:** [T01](../../reports/P02-T01-model-provenance.md), [T02](../../reports/P02-T02-evaluation-dataset.md), [T03](../../reports/P02-T03-text-length-cap.md), [T04](../../reports/P02-T04-inference-interface.md), [T05](../../reports/P02-T05-evaluation.md), [T06](../../reports/P02-T06-artifact-layout.md) และ T11 · T07–T10 ยังเป็น `planned` และช่อง "ผลจริง" ยังเป็น *ยังไม่รัน*
 
 ---
 
@@ -45,7 +45,7 @@
 
 ## 2. Tasks และ verification
 
-T06–T10 สถานะ `planned` ช่อง "ผลจริง" = ยังไม่รัน · **T01–T05 และ T11 `done`** มีผลจริงบันทึกไว้ · ค่าที่ต้องวัด (metric, เพดานความยาวข้อความ, tolerance, RAM, เวลาโหลด) เขียนไว้เป็นสิ่งที่ต้องวัดแล้วบันทึก **ไม่ใส่ตัวเลขคาดเดาล่วงหน้า**
+T07–T10 สถานะ `planned` ช่อง "ผลจริง" = ยังไม่รัน · **T01–T06 และ T11 `done`** มีผลจริงบันทึกไว้ · ค่าที่ต้องวัด (metric, เพดานความยาวข้อความ, tolerance, RAM, เวลาโหลด) เขียนไว้เป็นสิ่งที่ต้องวัดแล้วบันทึก **ไม่ใส่ตัวเลขคาดเดาล่วงหน้า**
 
 **ลำดับการทำงาน ไม่ใช่เรียงตามหมายเลข** — ID คงที่ตามที่ตั้งไว้ แต่ลำดับจริงคือ:
 
@@ -187,12 +187,24 @@ T11 (environment)  →  T01 (model)  →  T03 (เพดานข้อควา
 
 ### P02-T06 — Lock รูปแบบชุด artifact
 
-- **สถานะ:** `planned`
+- **สถานะ:** `done` — รูปแบบล็อกแล้ว และผ่าน Check ว่าโหลดได้โดยไม่พึ่งไฟล์นอกชุด
 - **งาน:** กำหนดว่าชุด model ที่ package แล้วประกอบด้วยอะไรและวางโครงสร้างอย่างไร โดยเก็บไว้ที่ `artifacts/` ตามโครงสร้างใน [P01-T03 §6](P01-T03-system-structure.md#6-ตำแหน่ง-code-data-model-และ-configuration) และหน้าที่ของส่วนเตรียม model ใน [P01-T03 §2](P01-T03-system-structure.md#2-ส่วนเตรียม-model--ทำก่อนนำรุ่นนั้นไปใช้งาน) ("model, tokenizer และ configuration")
 - **Done when:** ระบุรายการไฟล์ในชุด artifact, โครงสร้างภายใน และ **version id ที่ใช้อ้างถึงชุดนั้น** — โดย**ไม่ผูกกับบริการเก็บไฟล์** เพื่อไม่ปิดทางเลือกของ T10 และไม่ปิดทางเลือกวิธีนำเข้า container ของ P03–P04
 - **Check:** ประกอบชุด artifact จากขั้นตอนที่เขียนไว้ แล้วโหลดด้วย module จาก T04 ได้สำเร็จโดยไม่ต้องพึ่งไฟล์นอกชุด
-- **ผลจริง:** ยังไม่รัน
+- **ผลจริง (รัน 2026-10-07):** หลักฐานใน [reports/P02-T06-artifact-layout.md](../../reports/P02-T06-artifact-layout.md) · ชุดที่สร้าง `sentiment-6e7ff9fbc17c` (477 MiB)
+  - **Decision (โครงสร้าง):** `artifacts/<artifact_id>/` มี `manifest.json`, `upstream-model-card.md` และโฟลเดอร์ `model/` ที่มีเฉพาะสิ่งที่ loader อ่าน — แยก `model/` เพราะ `transformers` สแกนทั้ง directory ที่ส่งให้
+  - **Decision (`artifact_id`):** **content-addressed** `sentiment-<sha256 ของรายการ ชื่อไฟล์:hash ใน model/ 12 ตัวแรก>` → input เดิมให้ id เดิมเสมอ สองคนที่ package แยกกันบอกได้ว่าได้ของชุดเดียวกัน โดยไม่ต้องมีทะเบียนกลาง (สำคัญเพราะยังไม่เลือกบริการเก็บใน T10) · **ไม่ใช่ `model_version`** ซึ่งเป็นงาน T07
+  - **Decision (safetensors):** **แปลง `pytorch_model.bin` เป็น `model.safetensors`** · เหตุผลหลัก: `.bin` เป็น pickle ที่รันโค้ดตอน deserialize ขณะที่ Proposal §5 ระบุว่า P05 จะ**ตั้งใจทำให้ artifact ใช้งานไม่ได้** การโหลดไฟล์ที่ถูกแก้ไขจึงไม่ควรเป็นการรันโค้ดจากไฟล์นั้น · `safetensors` เป็น dependency ต่อเนื่องของ `transformers` อยู่แล้ว ไม่เพิ่มของใหม่
+  - **Observed:** ชุดที่แปลงมี **201 tensor** ขณะที่ต้นทางมี 204 — หายไป `roberta.embeddings.position_ids` (buffer) และ pooler 2 ตัวที่ head ไม่เรียก · **บันทึกใน manifest เพราะชุดนี้ไม่ใช่สำเนาต้นทาง**
+  - **Observed (ยืนยันว่าการแปลงไม่เปลี่ยนผล):** `state_dict` ตรงกันทั้ง 201 ตัว **เท่ากันทุก bit** · logits บนข้อความจริง 300 แถวจาก evaluation set ต่างกันสูงสุด **0.000e+00** · sentiment ที่ทำนายต่างกัน **0/300**
+  - **Observed (Check):** ตั้ง `HF_HOME` ชี้ไป directory ว่าง + `HF_HUB_OFFLINE=1` + `TRANSFORMERS_OFFLINE=1` แล้วโหลดสำเร็จ → **ไม่แตะ cache และไม่ต่อ network** · `labels` และ `max_content_tokens` (510) ตรงกับ T01/T03 · ทำนาย 3 ข้อความอ้างอิงได้ค่าตรงกับที่ T01 บันทึก
+  - **Observed:** hash ของไฟล์ที่คัดลอกทั้ง byte ตรงกับที่ T01 บันทึกทุกตัว จึงตรวจย้อนถึงต้นทางได้ตรง ๆ
+  - **Decision:** **ไม่เพิ่ม `tokenizer_config.json`** เข้าชุด แม้ T01 พบว่าการไม่มีไฟล์นี้ทำให้ `model_max_length` เป็น sentinel · เพราะจะมีแหล่งความจริงสองที่สำหรับเพดาน ขณะที่ `SentimentClassifier` คำนวณจาก `config.json` อยู่แล้ว · บันทึก `max_content_tokens: 510` ใน manifest เป็น metadata ที่ loader ไม่ได้ใช้ · **ผลที่ตามมา: โหลดชุดนี้ด้วย `transformers` เปล่า ๆ จะยังเจอค่า sentinel**
+  - **ไม่ผูกกับบริการเก็บ:** manifest **ไม่บันทึกที่เก็บหรือ URL** เพื่อไม่ปิดทางเลือกของ T10 และ P03–P04
 - **ขึ้นกับ:** T01
+- **ส่งต่อให้ T10:** ชุด artifact **477 MiB** (`model.safetensors` 498,615,868 bytes) — ใช้ประเมินค่าเก็บข้อมูลกับงบ USD 15
+- **ส่งต่อให้ T09:** ยังไม่ได้วัดว่า safetensors โหลดเร็วกว่า `.bin` จริงเท่าไร — อ้างตามคุณสมบัติของรูปแบบ ไม่ใช่จากการวัดของเรา
+- **ส่งต่อให้ P03 และ P05:** `manifest.json` มี hash ของทุกไฟล์ให้ตรวจความครบถ้วนได้ **แต่ยังไม่มีโค้ดที่เรียกตรวจตอน startup** และยังไม่ตกลงว่าจะตรวจที่ไหน
 
 ### P02-T07 — Lock lineage metadata และ `model_version` scheme
 
@@ -303,9 +315,9 @@ T11 (environment)  →  T01 (model)  →  T03 (เพดานข้อควา
 
 **สถานะรอบนี้:** **T04 `done`** — shared inference module พร้อม interface ที่ล็อกให้คนที่ 2 · **T05 `done`** — evaluate 14,640 แถวได้ **macro-F1 0.7606 / accuracy 0.8100** ยืนยันเลขด้วย scikit-learn และรันซ้ำจาก tree สะอาดได้เลขเดิมทุกหลัก · **T11 `done`** — uv + uv.lock + Python 3.13 เป็น convention ของทีม · รวม 27 tests ผ่านหมด · **T01 เสร็จ** — pin revision, ยืนยัน licence, อ่าน label mapping จาก config จริง, ยืนยันนิยาม `score` · **T02 เสร็จ** — pin dataset version 4, นิยาม evaluation set 14,640 แถว, ยืนยัน label ตรงกับ model · **T03 เสร็จ** — ล็อกเพดาน 510 content tokens และบันทึกกลับเข้า P01-T02 แล้ว **ปลด blocker ให้ P03** · หลักฐานทั้งสามอยู่ใน `reports/` · ยังไม่เขียนโค้ดใน `src/` (ตาม [P01-T03 §8](P01-T03-system-structure.md#8-หน้าที่ของเอกสารและการสร้างไฟล์) ที่ห้ามสร้างโฟลเดอร์เปล่ารอล่วงหน้า)
 
-**งานที่เหลือและ blocker:** T06–T10 ยังเป็น `planned` · T01–T05 และ T11 `done` · **ไม่มี blocker** · ผล evaluation ผูกกับ commit `40dcb77` ที่ tree สะอาด จึงใช้เป็น lineage ของ T07 และฐานเทียบของ T08 ได้แล้ว · T11 `in_progress` ปิดไม่ได้จนคนที่ 2 ยืนยัน convention · **ไม่มี blocker ที่หยุดงานฝั่งเราอยู่** · T10 รอมติทีมแต่บล็อกแค่คนที่ 2 ตอนนำ model เข้า container
+**งานที่เหลือและ blocker:** T07–T10 ยังเป็น `planned` · T01–T06 และ T11 `done` · **ไม่มี blocker** · ผล evaluation ผูกกับ commit `40dcb77` ที่ tree สะอาด จึงใช้เป็น lineage ของ T07 และฐานเทียบของ T08 ได้แล้ว · T11 `in_progress` ปิดไม่ได้จนคนที่ 2 ยืนยัน convention · **ไม่มี blocker ที่หยุดงานฝั่งเราอยู่** · T10 รอมติทีมแต่บล็อกแค่คนที่ 2 ตอนนำ model เข้า container
 
-**Next action:** **T06** (รูปแบบ artifact) → **T07** (lineage + `model_version`) → **T10** (ที่เก็บ artifact) → **T08** (tolerance) · **T09** (RAM/เวลาโหลด) เริ่มขนานได้ทุกเมื่อ: ส่ง `pyproject.toml` กับ `uv.lock` ให้คนที่ 2 ยืนยัน T11 และขอมติ T10 · **rotate Kaggle token** เพราะค่าเดิมอยู่ใน transcript แล้ว
+**Next action:** **T07** (lineage + `model_version`) ซึ่งอ้าง `artifact_id` จาก T06 ได้แล้ว → **T10** (ที่เก็บ artifact) → **T08** (tolerance) · **T09** (RAM/เวลาโหลด) เริ่มขนานได้ทุกเมื่อ: ส่ง `pyproject.toml` กับ `uv.lock` ให้คนที่ 2 ยืนยัน T11 และขอมติ T10 · **rotate Kaggle token** เพราะค่าเดิมอยู่ใน transcript แล้ว
 
 ช่องว่างที่พบระหว่างอ่านเอกสาร P01 — **ยังไม่แก้ไฟล์ของคนอื่นในรอบนี้** ต้องคุยกันก่อน:
 
