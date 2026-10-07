@@ -25,3 +25,8 @@ __pycache__/
 *.tmp
 .DS_Store
 Thumbs.db
+
+# Dataset and model file sets pulled or built locally (P01-T03 section 7).
+# The version, hash, and retrieval steps are recorded in reports/ instead.
+data/
+artifacts/
