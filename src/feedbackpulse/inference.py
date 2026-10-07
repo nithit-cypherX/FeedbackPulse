@@ -73,6 +73,13 @@ class SentimentClassifier:
         self._special_tokens = tokenizer.num_special_tokens_to_add(pair=False)
         self._max_content_tokens = max_total - self._special_tokens
 
+        # The upstream repo ships no tokenizer_config.json, so this attribute
+        # arrives as a sentinel of ~1e30 (reports/P02-T01-model-provenance.md).
+        # Anything comparing a length against it would conclude nothing is ever
+        # too long. Setting it keeps a tokenizer taken from this object honest,
+        # while the single source of the number stays the config above.
+        tokenizer.model_max_length = max_total
+
     @classmethod
     def load(cls, model_dir, model_version: str) -> "SentimentClassifier":
         """Load the model from a local directory, or raise ModelNotReady."""

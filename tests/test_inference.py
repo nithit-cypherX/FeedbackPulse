@@ -43,6 +43,19 @@ def test_token_limit_matches_the_recorded_value(classifier):
     assert classifier.max_content_tokens == EXPECTED_MAX_CONTENT_TOKENS
 
 
+def test_tokenizer_reports_a_usable_limit_rather_than_the_sentinel(classifier):
+    """The repo ships no tokenizer_config.json, so this would otherwise be ~1e30.
+
+    Anything comparing a token count against that value concludes nothing is
+    ever too long, which would turn an over-long request into a 500 instead of
+    the 422 the contract requires.
+    """
+    limit = classifier._tokenizer.model_max_length
+    assert limit == EXPECTED_MAX_CONTENT_TOKENS + 2
+    over_long = classifier._tokenizer("ok " * 600)["input_ids"]
+    assert len(over_long) > limit
+
+
 @pytest.mark.parametrize(
     "text",
     [

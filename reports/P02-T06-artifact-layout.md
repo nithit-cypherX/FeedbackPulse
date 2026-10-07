@@ -51,6 +51,8 @@ sentiment-<sha256(ของรายการ "ชื่อไฟล์:hash" �
 
 `artifact_id` · เวลาสร้าง · `loadable_dir` · repo/revision/licence ต้นทาง · **hash ต้นทางของทุกไฟล์รวม `pytorch_model.bin`** · รายละเอียดการแปลง weights · labels และ `max_content_tokens` · commit ที่ build · เวอร์ชัน `torch`/`transformers`/`safetensors` · hash ของทุกไฟล์ในชุด
 
+`labels` และ `max_content_tokens` **อ่านจาก loader ที่โหลดชุดที่ build เสร็จแล้ว** ไม่ได้คำนวณซ้ำใน packaging script · ทำให้ manifest รายงานตัวเลขของ loader เองและ **การ build จะล้มทันทีถ้าชุดที่ประกอบขึ้นโหลดไม่ได้** ไม่ต้องรอตรวจด้วยมือ
+
 **ไม่บันทึกที่เก็บหรือ URL** เพื่อไม่ผูกกับการตัดสินของ T10
 
 ## 3. วิธีรันซ้ำ
@@ -102,7 +104,11 @@ hash ของไฟล์ที่คัดลอกมาตรงกับท
 
 ## 6. มีข้อจำกัดอะไร และส่งต่ออะไร
 
-**ไม่ได้เพิ่ม `tokenizer_config.json` เข้าชุด** ทั้งที่ [P02-T01](P02-T01-model-provenance.md) พบว่าการไม่มีไฟล์นี้ทำให้ `tokenizer.model_max_length` คืนค่า sentinel · เหตุผล: ถ้าเพิ่มจะมีแหล่งความจริงสองที่สำหรับเพดานความยาวข้อความ ขณะที่ `SentimentClassifier` คำนวณจาก `config.json` อยู่แล้ว · แทนที่จะเพิ่มไฟล์ จึงบันทึก `max_content_tokens: 510` ไว้ใน `manifest.json` เป็น metadata ที่คนอ่านได้ **แต่ loader ไม่ได้ใช้** · **ผลที่ตามมา: ใครโหลดชุดนี้ด้วย `transformers` เปล่า ๆ จะยังเจอค่า sentinel** ต้องโหลดผ่านโมดูลของเราหรืออ่านเพดานจาก manifest
+**ไม่ได้เพิ่ม `tokenizer_config.json` เข้าชุด** ทั้งที่ [P02-T01](P02-T01-model-provenance.md) พบว่าการไม่มีไฟล์นี้ทำให้ `tokenizer.model_max_length` คืนค่า sentinel · เหตุผล: ถ้าเพิ่มจะมีแหล่งความจริงสองที่สำหรับเพดานความยาวข้อความ ขณะที่ `SentimentClassifier` คำนวณจาก `config.json` อยู่แล้ว · แทนที่จะเพิ่มไฟล์ จึงบันทึก `max_content_tokens: 510` ไว้ใน `manifest.json` เป็น metadata ที่คนอ่านได้
+
+**แก้ช่องที่พังเงียบแล้ว (2026-10-07):** `SentimentClassifier.load()` ตั้ง `tokenizer.model_max_length` ให้เป็นค่าที่ derive ได้ (512) · วัดได้ก่อนแก้ว่าข้อความ 603 tokens เทียบกับ sentinel ให้ผล `False` คือ **ตรวจไม่เจอว่าเกินเพดาน** ซึ่งจะทำให้ข้อความยาวเกินไปถึง model แล้วกลายเป็น `500` แทน `422` · ตัวเลขยังมาจาก `config.json` ที่เดียวเหมือนเดิม ไม่ได้เพิ่มไฟล์ที่เราแต่งขึ้น · ผลพลอยได้: `transformers` เตือนดัง ๆ ว่า `603 > 512 ... will result in indexing errors` ซึ่งเดิมเงียบสนิท · มี test กำกับไว้
+
+**ที่ยังกันไม่ได้:** ถ้าใครเปิด `artifacts/<id>/model` ด้วย `AutoTokenizer` โดยตรงโดยไม่ผ่านโมดูลของเรา ก็ยังเจอค่า sentinel — กันด้วยเอกสารใน [P02-T04](P02-T04-inference-interface.md) ที่ระบุว่าห้ามเรียก tokenizer หรือ model เอง
 
 **ยังไม่ได้วัดเวลาโหลดจาก safetensors เทียบกับ `.bin`** — อ้างว่าเร็วกว่าตามคุณสมบัติของรูปแบบ **ไม่ใช่จากการวัดของเรา** · T09 เป็นผู้วัดเวลาโหลดและ RAM จริง
 

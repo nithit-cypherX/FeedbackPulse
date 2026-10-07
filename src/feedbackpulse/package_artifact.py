@@ -18,6 +18,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from feedbackpulse import model_files
+from feedbackpulse.inference import SentimentClassifier
 
 ARTIFACT_ROOT = Path("artifacts")
 
@@ -93,6 +94,12 @@ def build(snapshot_dir: Path, root: Path = ARTIFACT_ROOT) -> Path:
 
     shutil.copyfile(snapshot_dir / "README.md", staging / MODEL_CARD_FILE)
 
+    # Load what was just written rather than describing it from the source
+    # objects. The manifest then reports the loader's own numbers instead of a
+    # second copy of the same arithmetic, and a set that cannot be loaded fails
+    # here instead of reaching whoever receives it.
+    packaged = SentimentClassifier.load(model_dir, model_version=None)
+
     identifier = artifact_id(model_dir)
     upstream = {
         name: _sha256(snapshot_dir / name)
@@ -132,10 +139,8 @@ def build(snapshot_dir: Path, root: Path = ARTIFACT_ROOT) -> Path:
             ],
         },
         "model": {
-            "labels": [model.config.id2label[i] for i in sorted(model.config.id2label)],
-            "max_content_tokens": model.config.max_position_embeddings
-            - 2
-            - 2,  # position offset, then the two special tokens
+            "labels": list(packaged.labels),
+            "max_content_tokens": packaged.max_content_tokens,
         },
         "built_with": {
             "code_commit": _code_commit(),
