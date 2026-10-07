@@ -14,6 +14,7 @@ covers the test run, not this module.
 
 import hashlib
 import json
+import secrets
 import sys
 import time
 from datetime import UTC, datetime
@@ -41,8 +42,22 @@ def _package_versions() -> dict:
     }
 
 
+def new_run_id() -> str:
+    """Identify one execution.
+
+    R1 lists a run ID among the evidence to keep, and nothing else here can
+    serve as one: the pipeline is deterministic, so predictions_sha256 is the
+    same for every run over the same inputs and identifies the output rather
+    than the execution. The random suffix keeps two runs started in the same
+    second apart.
+    """
+    stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
+    return f"run-{stamp}-{secrets.token_hex(3)}"
+
+
 def run(classifier: SentimentClassifier, dataset_path=dataset.LOCAL_PATH) -> dict:
     """Predict every row and return the metrics plus the inputs they came from."""
+    run_id = new_run_id()
     dataset_hash = dataset.verify(dataset_path)
 
     pairs = []
@@ -82,6 +97,7 @@ def run(classifier: SentimentClassifier, dataset_path=dataset.LOCAL_PATH) -> dic
         "versions": _package_versions(),
     }
     result["run"] = {
+        "run_id": run_id,
         "finished_utc": datetime.now(UTC).isoformat(timespec="seconds"),
         "seconds": round(elapsed, 1),
     }
@@ -101,6 +117,7 @@ def main() -> None:
     RESULT_PATH.parent.mkdir(parents=True, exist_ok=True)
     RESULT_PATH.write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
 
+    print(f"run_id         : {result['run']['run_id']}")
     print(f"rows evaluated : {result['total']:,}")
     print(f"rows skipped   : {len(result['skipped'])}")
     print(f"predictions    : {result['predictions_sha256'][:16]}...")

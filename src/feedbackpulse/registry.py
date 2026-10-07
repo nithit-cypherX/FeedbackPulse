@@ -135,6 +135,7 @@ def build_lineage(artifact_dir: Path) -> dict:
             "result_file": None,
             "produced_from": str(EVALUATION_RESULT),
             "result_sha256": _sha256_file(EVALUATION_RESULT),
+            "run_id": evaluation["run"]["run_id"],
             "run_finished_utc": evaluation["run"]["finished_utc"],
             "accuracy": evaluation["accuracy"],
             "macro_f1": evaluation["macro_f1"],

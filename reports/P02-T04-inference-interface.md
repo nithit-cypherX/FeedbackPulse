@@ -78,7 +78,7 @@ result = clf.predict("My flight was delayed.")
 | พฤติกรรม | หลักฐาน | ช่องว่าง |
 |---|---|---|
 | **โหลดครั้งเดียว** weights อยู่ใน instance ไม่โหลดใหม่ต่อ `predict()` ตาม [P01-T03 §3](../docs/plans/P01-T03-system-structure.md#3-ส่วนให้บริการ--รับ-feedback-แล้วทำนาย) | จริงโดยโครงสร้าง — `__init__` รับ model ที่โหลดแล้ว และ `predict()` ไม่เรียก `from_pretrained` | ไม่มี test ที่ assert ว่า `predict()` ไม่โหลดซ้ำ ถ้ามีใครย้ายการโหลดเข้าไปใน `predict()` จะไม่มีอะไรจับได้ |
-| **core ไม่อ่าน env ไม่ต่อ network** | `grep` แล้วไม่มี `os.environ`, `getenv`, `requests`, `azure`, `boto` ใน `inference.py` | เป็นการตรวจ ณ เวลานั้น **ไม่กันคนเพิ่มภายหลัง** · จุดตรวจ Portability ใน [P01-T03 §10](../docs/plans/P01-T03-system-structure.md#10-จุดตรวจที่ต้องไม่หลุดระหว่างทำงาน) ควรเป็นที่บังคับเรื่องนี้ แต่ `make portability-audit` ยังไม่มีนิยาม |
+| **core ไม่อ่าน env ไม่ต่อ network** | `grep` แล้วไม่มี `os.environ`, `getenv`, `requests`, `azure`, `boto` ใน `inference.py` | เป็นการตรวจ ณ เวลานั้น **ไม่กันคนเพิ่มภายหลัง** · ถ้าต้องการให้บังคับจริงต้องมี test หรือ lint rule ที่สแกน `src/` ซึ่งยังไม่มี |
 
 ## 4. ผลตรวจ
 
@@ -106,7 +106,7 @@ Tests ที่รันผ่าน:
 
 **ยังยืนยันไม่ได้ว่า "evaluation path กับ API path เรียกฟังก์ชันเดียวกัน"** เพราะยังไม่มีทั้ง evaluation script (T05) และ API (P03) · ตอนนี้ยืนยันได้แค่ว่า **มีจุดเรียกเดียวให้ใช้** · **นี่คือเหตุผลเดียวที่ T04 ยังปิดไม่ได้** ปิดได้ทันทีที่ T05 ยืนยันฝั่ง evaluation แล้วตรวจฝั่ง API ซ้ำใน P03
 
-**ยังไม่ผ่าน `make portability-audit`** เพราะคำสั่งนี้ยังไม่มีนิยามใน repo (ติดตามใน phase plan §5 ข้อ 3) · ที่ทำได้คือทำตามการแยก core/configuration ด้วยมือและตรวจด้วย grep
+**`make portability-audit` ไม่ใช่จุดตรวจของ P02** — [P01-T03 §10](../docs/plans/P01-T03-system-structure.md#10-จุดตรวจที่ต้องไม่หลุดระหว่างทำงาน) กำหนดให้ตรวจการแยก **core, configuration และ cloud adapter** โดยมีเงื่อนไขว่า "เมื่อพัฒนาส่วนที่เกี่ยวข้องแล้ว" · **P02 ไม่มี cloud adapter** (ไม่มี `cloudlayer/` และไม่มีโค้ดติดต่อ cloud ใน `src/`) จึงเป็นจุดตรวจของ **P03–P04** ตอนเขียนส่วนที่ติดต่อ Azure · ส่วนที่ P02 รับผิดชอบคือการแยก core ออกจาก configuration ซึ่งตรวจแล้วในตารางข้างบน
 
 ### Decision ที่ล็อกแล้ว — คนที่ 2 ใช้ตามนี้
 
