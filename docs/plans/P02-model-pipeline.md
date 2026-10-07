@@ -170,7 +170,7 @@ T11 (environment)  →  T01 (model)  →  T03 (เพดานข้อควา
   - ตรวจว่ารายงานไม่มี secret หรือข้อมูลอ่อนไหวก่อนเข้า Git (P01-T03 §7)
   - ถ้ายกตัวอย่างข้อความจาก dataset ในรายงาน ต้องสอดคล้องกับ [P01-T02 §5](P01-T02-api-contract.md#5-access-control-และข้อมูลที่ไม่เก็บ) ที่กำหนดว่าไม่บันทึก feedback เต็มข้อความ และกับ licence CC BY-NC-SA ของ dataset — ยกเท่าที่จำเป็นต่อการอธิบายผล
 - **Check:** เทียบตัวเลขในรายงานกับ output ของการรันจริง · ตรวจว่า metric คำนวณจาก label mapping ที่บันทึกใน T01/T02
-- **ผลจริง (รัน 2026-10-07 10:27 UTC · 648.1 วินาที):** หลักฐานใน [reports/P02-T05-evaluation.md](../../reports/P02-T05-evaluation.md) · ผล machine-readable ใน [`P02-T05-evaluation-result.json`](../../reports/P02-T05-evaluation-result.json)
+- **ผลจริง (รัน 2026-10-07 10:51 UTC · 674.1 วินาที · จาก commit `40dcb77` tree สะอาด):** หลักฐานใน [reports/P02-T05-evaluation.md](../../reports/P02-T05-evaluation.md) · ผล machine-readable ใน [`P02-T05-evaluation-result.json`](../../reports/P02-T05-evaluation-result.json)
   - **Decision:** **macro-F1 เป็น metric หลัก** ไม่ใช่ accuracy · เหตุผล: T02 พบว่า evaluation set เป็น `negative` 62.7% การตอบ `negative` ทุกข้อได้ accuracy 0.6271 แล้ว แต่ macro-F1 แค่ 0.2569 · มี test ที่พิสูจน์จุดนี้
   - **Observed:** 14,640 แถว ข้ามไป 0 แถว · **accuracy 0.8100 · macro-F1 0.7606** · macro precision 0.7453 · macro recall 0.7825
   - **Observed (per-class):** `negative` F1 0.8867 (n=9,178) · `neutral` F1 **0.6150** (n=3,099 — อ่อนที่สุด) · `positive` F1 0.7800 (n=2,363)
@@ -179,10 +179,11 @@ T11 (environment)  →  T01 (model)  →  T03 (เพดานข้อควา
   - **Observed:** `scikit-learn` ใช้แบบ ephemeral (`uv run --with`) **ไม่เพิ่มเข้า lockfile** เพราะใช้ตรวจเท่านั้น
   - **Observed:** ไม่มี secret และ **ไม่มีข้อความจาก dataset แม้แต่แถวเดียว** ในรายงานหรือไฟล์ผล → ปิดประเด็น licence CC BY-NC-SA ที่ T02 ทิ้งไว้
   - **Decision:** ไม่เพิ่ม batch — วัดได้ราว 44 ms/ข้อความ รวม 648 วินาที ซึ่งรับได้สำหรับงานที่รันตอน release · ตัวเลขนี้**ไม่ใช่ latency ของ API**
-  - **ข้อจำกัดสำคัญ:** รันบน tree ที่ **ไม่สะอาด** (`commit 632e1c6e…`, `dirty: true`) → **ย้อนกลับไปหา code รุ่นที่ให้ผลนี้จาก commit อย่างเดียวไม่ได้** ต้อง commit แล้วรันซ้ำก่อนใช้เป็น lineage ของ T07 และฐานเทียบของ T08
+  - **Observed:** รันซ้ำจาก tree ที่สะอาดแล้ว — ไฟล์ผลบันทึก `commit 40dcb77`, `dirty: false`, `uncommitted: []` → **ย้อนกลับไปหา code รุ่นที่ให้ผลนี้ได้จาก commit** · ใช้เป็น lineage ของ T07 และฐานเทียบของ T08 ได้
+  - **Observed (ข้อมูลให้ T08):** รันสองรอบบนเครื่องเดียวกันได้ **metric ตรงกันทุกหลักและ confusion matrix ตรงทุกช่อง** ต่างแค่เวลา 648.1 → 674.1 วินาที · **ยังไม่ปิด T08** เพราะยังไม่ทดสอบจาก fresh state และยังไม่ทดสอบข้ามเครื่อง
   - **ข้อจำกัด:** `model_version` ในไฟล์ผลเป็นค่าชั่วคราว `unversioned-3216a57f2a0d` เพราะ scheme เป็นงานของ T07
 - **ขึ้นกับ:** T02, T04
-- **ส่งต่อให้ T08:** ไฟล์ JSON ออกแบบให้เทียบสองรอบได้ตรง ๆ · รอบเทียบจะใช้เวลาใกล้เคียง 648 วินาที · **ยังไม่มีค่า tolerance** และยังไม่รู้ว่ารันซ้ำได้เลขเดียวกันทุกหลักหรือไม่ — T08 เป็นผู้ตอบ
+- **ส่งต่อให้ T08:** ไฟล์ JSON ออกแบบให้เทียบสองรอบได้ตรง ๆ · รอบเทียบใช้เวลาราว 650–680 วินาที · **ยังไม่มีค่า tolerance** — T08 เป็นผู้กำหนดจากผลที่วัดได้ โดยต้องตรวจเพิ่มสองเงื่อนไขที่ยังไม่ทำ: รันจาก fresh state และรันข้ามเครื่อง
 
 ### P02-T06 — Lock รูปแบบชุด artifact
 
@@ -300,11 +301,11 @@ T11 (environment)  →  T01 (model)  →  T03 (เพดานข้อควา
 
 ## 5. Handoff และรายการที่ต้องคุยกับทีม
 
-**สถานะรอบนี้:** **T04 `done`** — shared inference module พร้อม interface ที่ล็อกให้คนที่ 2 · **T05 `done`** — evaluate 14,640 แถวได้ **macro-F1 0.7606 / accuracy 0.8100** ยืนยันเลขด้วย scikit-learn แล้ว · **T11 `done`** — uv + uv.lock + Python 3.13 เป็น convention ของทีม · รวม 20 tests ผ่านหมด · **T01 เสร็จ** — pin revision, ยืนยัน licence, อ่าน label mapping จาก config จริง, ยืนยันนิยาม `score` · **T02 เสร็จ** — pin dataset version 4, นิยาม evaluation set 14,640 แถว, ยืนยัน label ตรงกับ model · **T03 เสร็จ** — ล็อกเพดาน 510 content tokens และบันทึกกลับเข้า P01-T02 แล้ว **ปลด blocker ให้ P03** · หลักฐานทั้งสามอยู่ใน `reports/` · ยังไม่เขียนโค้ดใน `src/` (ตาม [P01-T03 §8](P01-T03-system-structure.md#8-หน้าที่ของเอกสารและการสร้างไฟล์) ที่ห้ามสร้างโฟลเดอร์เปล่ารอล่วงหน้า)
+**สถานะรอบนี้:** **T04 `done`** — shared inference module พร้อม interface ที่ล็อกให้คนที่ 2 · **T05 `done`** — evaluate 14,640 แถวได้ **macro-F1 0.7606 / accuracy 0.8100** ยืนยันเลขด้วย scikit-learn และรันซ้ำจาก tree สะอาดได้เลขเดิมทุกหลัก · **T11 `done`** — uv + uv.lock + Python 3.13 เป็น convention ของทีม · รวม 27 tests ผ่านหมด · **T01 เสร็จ** — pin revision, ยืนยัน licence, อ่าน label mapping จาก config จริง, ยืนยันนิยาม `score` · **T02 เสร็จ** — pin dataset version 4, นิยาม evaluation set 14,640 แถว, ยืนยัน label ตรงกับ model · **T03 เสร็จ** — ล็อกเพดาน 510 content tokens และบันทึกกลับเข้า P01-T02 แล้ว **ปลด blocker ให้ P03** · หลักฐานทั้งสามอยู่ใน `reports/` · ยังไม่เขียนโค้ดใน `src/` (ตาม [P01-T03 §8](P01-T03-system-structure.md#8-หน้าที่ของเอกสารและการสร้างไฟล์) ที่ห้ามสร้างโฟลเดอร์เปล่ารอล่วงหน้า)
 
-**งานที่เหลือและ blocker:** T06–T10 ยังเป็น `planned` · T01–T05 และ T11 `done` · **ไม่มี blocker** · **แต่ต้อง commit แล้วรัน T05 ซ้ำ** ก่อนใช้ผล evaluation เป็น lineage ของ T07 และฐานเทียบของ T08 เพราะรอบนี้รันบน tree ที่ไม่สะอาด · T11 `in_progress` ปิดไม่ได้จนคนที่ 2 ยืนยัน convention · **ไม่มี blocker ที่หยุดงานฝั่งเราอยู่** · T10 รอมติทีมแต่บล็อกแค่คนที่ 2 ตอนนำ model เข้า container
+**งานที่เหลือและ blocker:** T06–T10 ยังเป็น `planned` · T01–T05 และ T11 `done` · **ไม่มี blocker** · ผล evaluation ผูกกับ commit `40dcb77` ที่ tree สะอาด จึงใช้เป็น lineage ของ T07 และฐานเทียบของ T08 ได้แล้ว · T11 `in_progress` ปิดไม่ได้จนคนที่ 2 ยืนยัน convention · **ไม่มี blocker ที่หยุดงานฝั่งเราอยู่** · T10 รอมติทีมแต่บล็อกแค่คนที่ 2 ตอนนำ model เข้า container
 
-**Next action:** **commit ก่อน** แล้ว **รัน T05 ซ้ำ** เพื่อให้ผลผูกกับ commit ที่สะอาด · จากนั้น **T06** (รูปแบบ artifact) → **T07** (lineage + `model_version`) → **T10** (ที่เก็บ artifact) → **T08** (tolerance) · **T09** (RAM/เวลาโหลด) เริ่มขนานได้ทุกเมื่อ: ส่ง `pyproject.toml` กับ `uv.lock` ให้คนที่ 2 ยืนยัน T11 และขอมติ T10 · **rotate Kaggle token** เพราะค่าเดิมอยู่ใน transcript แล้ว
+**Next action:** **T06** (รูปแบบ artifact) → **T07** (lineage + `model_version`) → **T10** (ที่เก็บ artifact) → **T08** (tolerance) · **T09** (RAM/เวลาโหลด) เริ่มขนานได้ทุกเมื่อ: ส่ง `pyproject.toml` กับ `uv.lock` ให้คนที่ 2 ยืนยัน T11 และขอมติ T10 · **rotate Kaggle token** เพราะค่าเดิมอยู่ใน transcript แล้ว
 
 ช่องว่างที่พบระหว่างอ่านเอกสาร P01 — **ยังไม่แก้ไฟล์ของคนอื่นในรอบนี้** ต้องคุยกันก่อน:
 
