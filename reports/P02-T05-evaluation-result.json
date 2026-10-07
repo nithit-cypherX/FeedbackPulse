@@ -1,0 +1,74 @@
+{
+  "total": 14640,
+  "correct": 11859,
+  "accuracy": 0.8100409836065574,
+  "macro_f1": 0.7605863552090412,
+  "macro_precision": 0.7453206994814039,
+  "macro_recall": 0.7825059403653514,
+  "per_class": {
+    "negative": {
+      "precision": 0.9153328694038506,
+      "recall": 0.8598823273044236,
+      "f1": 0.8867415730337077,
+      "support": 9178
+    },
+    "neutral": {
+      "precision": 0.6163318211276734,
+      "recall": 0.6137463697967086,
+      "f1": 0.6150363783346807,
+      "support": 3099
+    },
+    "positive": {
+      "precision": 0.7042974079126876,
+      "recall": 0.8738891239949217,
+      "f1": 0.7799811142587347,
+      "support": 2363
+    }
+  },
+  "confusion": {
+    "negative": {
+      "negative": 7892,
+      "neutral": 966,
+      "positive": 320
+    },
+    "neutral": {
+      "negative": 650,
+      "neutral": 1902,
+      "positive": 547
+    },
+    "positive": {
+      "negative": 80,
+      "neutral": 218,
+      "positive": 2065
+    }
+  },
+  "skipped": [],
+  "inputs": {
+    "model_repo": "cardiffnlp/twitter-roberta-base-sentiment-latest",
+    "model_revision": "3216a57f2a0d9c45a2e6c20157c20c49fb4bf9c7",
+    "labels_from_model_config": [
+      "negative",
+      "neutral",
+      "positive"
+    ],
+    "max_content_tokens": 510,
+    "dataset_handle": "crowdflower/twitter-airline-sentiment/versions/4",
+    "dataset_path": "data/Tweets.csv",
+    "dataset_sha256": "ea94b23f41892b290dec3330bb8cf9cb6b8bc669eaae5f3a84c40f7b0de8f15e",
+    "code": {
+      "commit": "632e1c6e555b2811e7004d7655eb9a1f40bca502",
+      "dirty": true
+    },
+    "versions": {
+      "python": "3.13.11",
+      "torch": "2.14.1",
+      "transformers": "5.19.0",
+      "numpy": "2.5.3",
+      "tokenizers": "0.23.2"
+    }
+  },
+  "run": {
+    "finished_utc": "2026-10-07T10:27:03+00:00",
+    "seconds": 648.1
+  }
+}
