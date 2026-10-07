@@ -1,6 +1,6 @@
 # FeedbackPulse — Overview Plan
 
-อัปเดตสถานะ: 2026-10-05 · P01: `in_progress` · P02–P06: `planned`
+อัปเดตสถานะ: 2026-10-07 · P01: `in_progress` · **P02: `done`** · P03–P06: `planned`
 
 ผมเสนอแบ่ง **FeedbackPulse เป็น 6 ส่วนหลัก** ครับ โดยใช้ skill `plan-and-track-work`: วางภาพรวมให้ครบก่อน แล้วค่อยแตกงานย่อยเฉพาะส่วนที่กำลังทำ เพื่อไม่ให้รายการงานเยอะเกินไป
 
@@ -48,10 +48,21 @@
 
 2. **P01-T02 — ตกลงรูปแบบ API**
 
-   ข้อตกลงหลักได้รับความเห็นชอบแล้ว ดู [API contract](docs/plans/P01-T02-api-contract.md) สำหรับ request/response, validation และ error handling สถานะยังเป็น `in_progress` เพราะตัวเลขเพดานความยาวข้อความรอยืนยันกับ model ใน P02; ยังไม่ได้ implement หรือทดสอบ
+   ข้อตกลงหลักได้รับความเห็นชอบแล้ว ดู [API contract](docs/plans/P01-T02-api-contract.md) สำหรับ request/response, validation และ error handling · **สถานะเป็น `done` เฉพาะการตกลงแล้วเมื่อ 2026-10-07** เพราะเพดานความยาวข้อความยืนยันแล้วใน P02-T03 คือ 510 content tokens (รวม special tokens เป็น 512); ยังไม่ได้ implement หรือทดสอบ — การตรวจ boundary ผ่าน API อยู่ใน P03
 
 3. **P01-T03 — วางโครงสร้างระบบและจุดตรวจ**
 
    สถานะ `done` เฉพาะการตกลงแผน — ยืนยันครบทั้ง 3 เรื่องแล้ว: หน้าที่ของระบบ โครงสร้างโฟลเดอร์กับกติกาเข้า Git และจุดตรวจพร้อมหลักฐาน R1–R5 ดู [System structure](docs/plans/P01-T03-system-structure.md) เพื่อใช้เป็นฐานสำหรับ architecture review; ยังไม่ได้ implement หรือทดสอบ
 
-**การส่งต่องาน:** ผู้ใช้ยืนยันเมื่อ 2026-10-05 ว่า P02 ให้เพื่อนในทีมรับไปดำเนินการต่อ งานรอบนี้จบที่บันทึกข้อตกลง P01 และ commit/push เอกสาร ไม่เริ่ม P02 ส่วนเพดานความยาวข้อความของ P01-T02 ยังรอผลตรวจ model ใน P02 และรายชื่อเจ้าของงานรอทีมระบุ จึงยังไม่ปิด P01 ทั้งส่วน ยังไม่ได้พัฒนา API สร้าง Azure resource หรือติดตั้งอะไรเพิ่ม
+**การส่งต่องาน:** P01 บันทึกข้อตกลงไว้ครบแล้ว · **เพดานความยาวข้อความปิดแล้วใน P02-T03** จึงเหลือเพียง **รายชื่อเจ้าของงานใน [Proposal §7](PROPOSAL.md) ที่ยังเป็น `[Name]`** ที่ทำให้ยังไม่ปิด P01 ทั้งส่วน
+
+## P02 เสร็จแล้ว — 2026-10-07
+
+ทั้ง 11 task `done` พร้อมหลักฐาน ดู [P02 phase plan](docs/plans/P02-model-pipeline.md) · เจ้าของงาน: คนที่ 1
+
+- `model_version` ที่ใช้งาน: `sentiment-6e7ff9fbc17c-32855c02` พร้อม lineage ใน `reports/registry/`
+- ผล evaluation บน 14,640 แถว: **accuracy 0.8100 · macro-F1 0.7606** ([รายงาน](reports/P02-T05-evaluation.md))
+- **คนที่ 2 เริ่ม P03 ได้แล้ว** — อ่าน [interface ที่ล็อกไว้](reports/P02-T04-inference-interface.md) และ [การตัดสินที่เก็บ artifact](reports/P02-T10-artifact-storage.md) · เพดานข้อความอยู่ใน [P01-T02 §7](docs/plans/P01-T02-api-contract.md)
+- **คนที่ 3 ต้องอ่าน** [P02-T10 ส่วนที่ 5](reports/P02-T10-artifact-storage.md) — การสาธิต failure เปลี่ยนวิธี เพราะ artifact อยู่ใน image ไม่มี blob ให้ลบ
+
+ยังไม่ได้พัฒนา API สร้าง Azure resource หรือ deploy อะไร — ทั้งหมดอยู่ใน P03–P04

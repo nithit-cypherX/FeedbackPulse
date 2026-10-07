@@ -57,14 +57,28 @@ result = clf.predict("My flight was delayed.")
 
 `TextTooLong` สืบทอดจาก `InvalidText` จึงจับ `InvalidText` ตัวเดียวแล้วตอบ `422` ได้ทั้งสองกรณี
 
-## 3. สิ่งที่โค้ดนี้รับประกัน
+## 3. พฤติกรรมของโค้ดนี้ และหลักฐานที่รองรับแต่ละข้อ
 
-- **เพดานตรวจก่อนเรียก model** — ข้อความ 511 tokens ถูกปฏิเสธด้วย `TextTooLong` ไม่ไปถึง forward pass ที่จะโยน `RuntimeError` และกลายเป็น `500` (ดู [P02-T03](P02-T03-text-length-cap.md))
-- **ไม่ truncate** — ไม่มี `truncation=True` ที่ใดใน `src/` ตามที่ [P01-T02 §3](../docs/plans/P01-T02-api-contract.md#3-request-และ-response) ห้าม
-- **โหลดครั้งเดียว** — weights อยู่ใน instance ไม่โหลดใหม่ต่อ `predict()` ตาม [P01-T03 §3](../docs/plans/P01-T03-system-structure.md#3-ส่วนให้บริการ--รับ-feedback-แล้วทำนาย)
-- **ชื่อกลุ่มอ่านจาก config** ไม่ hardcode ลำดับ index จึงเปลี่ยน revision แล้วไม่ map ผิดเงียบ ๆ
-- **`model_version` รับจากภายนอก** ไม่ได้ตั้งเอง เพื่อไม่ตัดสินแทน T07 ที่เป็นเจ้าของ scheme
-- **core ไม่อ่าน env ไม่ต่อ network** — ตรวจด้วย grep แล้วไม่มี `os.environ`, `getenv`, `requests`, `azure`, `boto` ใน `inference.py`
+**แยกตามความแข็งของหลักฐาน** — ข้อที่มี test กันการถดถอยได้ กับข้อที่ยืนยันด้วยการตรวจครั้งเดียวซึ่งไม่กันการถดถอย
+
+### มี test รองรับ
+
+| พฤติกรรม | test |
+|---|---|
+| **เพดานตรวจก่อนเรียก model** — 511 tokens ถูกปฏิเสธด้วย `TextTooLong` ไม่ถึง forward pass ที่จะโยน `RuntimeError` และกลายเป็น `500` | `test_text_one_token_over_the_limit_is_rejected_not_truncated` |
+| **ไม่ตัดข้อความ** ตามที่ [P01-T02 §3](../docs/plans/P01-T02-api-contract.md#3-request-และ-response) ห้าม | test เดียวกัน (ได้ exception ไม่ได้ผลทำนายจากข้อความที่ถูกตัด) |
+| **ชื่อกลุ่มอ่านจาก config** ไม่ hardcode ลำดับ index | `test_labels_come_from_the_model_config` |
+| **เพดานตรงกับที่ T03 บันทึก** | `test_token_limit_matches_the_recorded_value` |
+| **tokenizer ไม่รายงานค่า sentinel** | `test_tokenizer_reports_a_usable_limit_rather_than_the_sentinel` |
+| **`model_version` คืนค่าที่ส่งเข้ามา** ไม่ได้ตั้งเอง | `test_prediction_matches_the_api_contract` |
+| **โหลดไม่สำเร็จได้ error ที่แยกแยะได้** | `test_load_failure_is_distinguishable` |
+
+### ยืนยันด้วยการตรวจครั้งเดียว — **ไม่มี test กันการถดถอย**
+
+| พฤติกรรม | หลักฐาน | ช่องว่าง |
+|---|---|---|
+| **โหลดครั้งเดียว** weights อยู่ใน instance ไม่โหลดใหม่ต่อ `predict()` ตาม [P01-T03 §3](../docs/plans/P01-T03-system-structure.md#3-ส่วนให้บริการ--รับ-feedback-แล้วทำนาย) | จริงโดยโครงสร้าง — `__init__` รับ model ที่โหลดแล้ว และ `predict()` ไม่เรียก `from_pretrained` | ไม่มี test ที่ assert ว่า `predict()` ไม่โหลดซ้ำ ถ้ามีใครย้ายการโหลดเข้าไปใน `predict()` จะไม่มีอะไรจับได้ |
+| **core ไม่อ่าน env ไม่ต่อ network** | `grep` แล้วไม่มี `os.environ`, `getenv`, `requests`, `azure`, `boto` ใน `inference.py` | เป็นการตรวจ ณ เวลานั้น **ไม่กันคนเพิ่มภายหลัง** · จุดตรวจ Portability ใน [P01-T03 §10](../docs/plans/P01-T03-system-structure.md#10-จุดตรวจที่ต้องไม่หลุดระหว่างทำงาน) ควรเป็นที่บังคับเรื่องนี้ แต่ `make portability-audit` ยังไม่มีนิยาม |
 
 ## 4. ผลตรวจ
 

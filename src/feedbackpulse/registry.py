@@ -177,6 +177,10 @@ def main() -> None:
         print("no packaged artifact found; run package_artifact first", file=sys.stderr)
         raise SystemExit(1)
     if len(artifacts) > 1:
+        # ponytail: register whichever single artifact is present; ceiling:
+        # cannot hold two live versions at once; revisit when: P04 needs a
+        # rollback target alongside the current release; upgrade: take the
+        # artifact id as an argument and keep every entry side by side.
         print(
             f"several artifacts present, refusing to guess: {artifacts}",
             file=sys.stderr,

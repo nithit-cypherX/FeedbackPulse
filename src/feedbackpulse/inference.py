@@ -113,6 +113,12 @@ class SentimentClassifier:
         # No truncation: the real length is needed to reject, not to cut down.
         return len(self._tokenizer(text, add_special_tokens=False)["input_ids"])
 
+    # ponytail: one text per call; ceiling: throughput of a single forward
+    # pass per text, measured at 51ms for a short text and 184ms at the token
+    # limit in reports/P02-T09-load-and-memory.md; revisit when: a caller needs
+    # more throughput than that, such as an evaluation run outgrowing a
+    # tolerable wall time; upgrade: add a batched method here rather than
+    # tokenising anywhere else, so the single prediction path stays single.
     def predict(self, text: str) -> Prediction:
         """Classify one text.
 
