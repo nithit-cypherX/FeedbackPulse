@@ -2,13 +2,13 @@
 
 - แผนหลัก: [Overview plan](../../overview-plan.md) · ขอบเขตโครงการ: [Proposal](../../PROPOSAL.md)
 - ข้อตกลงที่ต้องทำตาม: [P01-T02 API contract](P01-T02-api-contract.md) · [P01-T03 System structure](P01-T03-system-structure.md)
-- สถานะ P02: `in_progress` — T01–T07, T09 และ T11 `done` · T08 กับ T10 `planned`
+- สถานะ P02: `in_progress` — T01–T07, T09, T10 และ T11 `done` · **เหลือ T08 เท่านั้น**
 - เจ้าของ: คนที่ 1 — Model และ evaluation (ตาม [overview](../../overview-plan.md))
 - อัปเดต: 2026-10-07
 
 **การเปลี่ยนอำนาจตัดสินใจ (ผู้ใช้สั่งเมื่อ 2026-10-07):** เรื่องที่แผนเดิมเขียนว่า *รอมติทีม* หรือ *รอคนที่ 2 ยืนยัน* เปลี่ยนเป็น **คนที่ 1 ตัดสินเอง แล้วคนที่ 2 รับไปทำต่อโดยอิงการตัดสินนี้** · กระทบ T04, T10 และ T11 · บันทึกไว้เพื่อให้เห็นว่าเป็นการเปลี่ยนขอบเขตที่ได้รับอนุญาต ไม่ใช่การลดเกณฑ์เพื่อปิด task · **เกณฑ์ทางเทคนิคอื่นไม่เปลี่ยน** — task ที่ยังตรวจไม่ได้ก็ยังปิดไม่ได้
 
-ไฟล์นี้เป็น **แผนของ phase P02** พร้อมบันทึกความคืบหน้าจริง · **เสร็จแล้ว 9 task:** [T01](../../reports/P02-T01-model-provenance.md), [T02](../../reports/P02-T02-evaluation-dataset.md), [T03](../../reports/P02-T03-text-length-cap.md), [T04](../../reports/P02-T04-inference-interface.md), [T05](../../reports/P02-T05-evaluation.md), [T06](../../reports/P02-T06-artifact-layout.md), [T07](../../reports/P02-T07-model-version-lineage.md), [T09](../../reports/P02-T09-load-and-memory.md) และ T11 · T08 กับ T10 ยังเป็น `planned` และช่อง "ผลจริง" ยังเป็น *ยังไม่รัน*
+ไฟล์นี้เป็น **แผนของ phase P02** พร้อมบันทึกความคืบหน้าจริง · **เสร็จแล้ว 10 task:** [T01](../../reports/P02-T01-model-provenance.md), [T02](../../reports/P02-T02-evaluation-dataset.md), [T03](../../reports/P02-T03-text-length-cap.md), [T04](../../reports/P02-T04-inference-interface.md), [T05](../../reports/P02-T05-evaluation.md), [T06](../../reports/P02-T06-artifact-layout.md), [T07](../../reports/P02-T07-model-version-lineage.md), [T09](../../reports/P02-T09-load-and-memory.md), [T10](../../reports/P02-T10-artifact-storage.md) และ T11 · **เหลือ T08 เท่านั้นที่ยังเป็น `planned`** และช่อง "ผลจริง" ยังเป็น *ยังไม่รัน*
 
 ---
 
@@ -45,7 +45,7 @@
 
 ## 2. Tasks และ verification
 
-T08 กับ T10 สถานะ `planned` ช่อง "ผลจริง" = ยังไม่รัน · **T01–T07, T09 และ T11 `done`** มีผลจริงบันทึกไว้ · ค่าที่ต้องวัด (metric, เพดานความยาวข้อความ, tolerance, RAM, เวลาโหลด) เขียนไว้เป็นสิ่งที่ต้องวัดแล้วบันทึก **ไม่ใส่ตัวเลขคาดเดาล่วงหน้า**
+T08 สถานะ `planned` ช่อง "ผลจริง" = ยังไม่รัน · **T01–T07, T09, T10 และ T11 `done`** มีผลจริงบันทึกไว้ · ค่าที่ต้องวัด (metric, เพดานความยาวข้อความ, tolerance, RAM, เวลาโหลด) เขียนไว้เป็นสิ่งที่ต้องวัดแล้วบันทึก **ไม่ใส่ตัวเลขคาดเดาล่วงหน้า**
 
 **ลำดับการทำงาน ไม่ใช่เรียงตามหมายเลข** — ID คงที่ตามที่ตั้งไว้ แต่ลำดับจริงคือ:
 
@@ -268,15 +268,26 @@ T11 (environment)  →  T01 (model)  →  T03 (เพดานข้อควา
 
 ### P02-T10 — ตัดสินที่เก็บ model artifact
 
-- **สถานะ:** `planned`
+- **สถานะ:** `done` — ตัดสินแล้วและบันทึกกลับเข้า P01-T03 §7 กับ §12
 - **งาน:** [P01-T03 §12](P01-T03-system-structure.md#12-สิ่งที่ยังไม่-lock-และงานคุยถัดไป) และ [§7](P01-T03-system-structure.md#7-อะไรเข้า-git-และอะไรไม่เข้า) มอบการตัดสิน "บริการหรือรูปแบบเก็บ model artifact ที่ทีมจะใช้ร่วมกัน" ให้ P02 · **คนที่ 1 ตัดสินเองตามอำนาจที่ได้รับเมื่อ 2026-10-07** แล้วบันทึกเหตุผลและ trade-off ให้คนที่ 2 รับไปทำต่อ
 - **Done when:**
   - เทียบอย่างน้อย 2 ทางเลือกด้าน **cold start, งบ USD 15 ต่อ 30 วัน (Proposal §6), ความง่ายในการ rollback (R2) และผลต่อการสาธิตเหตุขัดข้องของคนที่ 3 (R4)**
   - ~~ทีมเลือก~~ → **คนที่ 1 เลือกและบันทึกเหตุผลลง `reports/` พร้อมอัปเดต P01-T03 §12** แล้วแจ้งคนที่ 2 และคนที่ 3
   - **ต้องปิดก่อนคนที่ 2 เริ่มงานที่ต้องนำ model เข้า container ใน P03**
 - **Check:** มีการตัดสินที่บันทึกแล้ว และทางเลือกที่เลือกรองรับชุด artifact จาก T06 ได้
-- **ผลจริง:** ยังไม่รัน
+- **ผลจริง (ตัดสิน 2026-10-07):** หลักฐานและการเทียบใน [reports/P02-T10-artifact-storage.md](../../reports/P02-T10-artifact-storage.md)
+  - **Decision: ใส่ชุด artifact เข้า container image ตอน build ไม่ใช้ blob storage แยก**
+  - **เหตุผลหลัก:** [T07](../../reports/P02-T07-model-version-lineage.md) ออกแบบ `model_version` ให้ digest ครอบ code + environment + artifact พร้อมกัน · ถ้า artifact อยู่ใน blob ที่สลับได้ตอน runtime **`model_version` จะอ้างการผูกที่ไม่มีอะไรบังคับ** — เปลี่ยน blob แล้ว API ยังคืน version เดิมได้ · ส่ง code กับ artifact เป็น image ก้อนเดียวทำให้การผูกนั้นเป็นจริง
+  - **เหตุผลรอง:** rollback **ย้อนสิ่งเดียว** (image revision) ไม่ใช่สองสิ่งที่คลาดกันได้ — สำคัญกับ R2 · และไม่จ่ายค่าดึง artifact ซ้ำทุก cold start ซึ่ง Proposal §3 เลือก scale-to-zero เองจึงเกิดบ่อย · artifact ใน image แก้จากภายนอกไม่ได้ เข้ากับ `artifact_id` ที่ content-addressed
+  - **Decision (วิธีตัดสิน):** วางบนเกณฑ์ที่ยืนยันได้เท่านั้น — ขนาด 477 MiB (T06 วัดแล้ว), เวลาเริ่มระบบ 2.93 s (T09 วัดแล้ว), คุณสมบัติเชิงโครงสร้างของแต่ละทางเลือก, และสมมติฐานงบที่ [Proposal §6](../../PROPOSAL.md#6-cost-estimate) เขียนไว้เองว่ามี "one Basic container registry, 5 GB of blob storage" → **งบรองรับทั้งสองทาง จึงไม่ใช่ตัวตัดสิน**
+  - **Decision (สิ่งที่ตั้งใจไม่ใช้เป็นเกณฑ์):** **เวลาดาวน์โหลด 477 MiB จากบริการจริง** เพราะวัดในเครื่องไม่ได้ และการเดาจะขัด P01-T03 §10 ที่สั่งว่า "ไม่เดาตัวเลขล่วงหน้า" · ส่งเป็น**สูตรให้ P04 แทนค่า** แทนที่จะใส่ตัวเลข
+  - **Observed (Check):** ชุด artifact เป็น directory ของไฟล์ธรรมดา 6 ไฟล์ ไม่มี symlink · loader รับแค่ path ในเครื่อง **ยืนยันแล้วใน T06** ด้วยการโหลดโดยตั้ง `HF_HOME` ว่างและ `HF_HUB_OFFLINE=1` · `inference.py` ไม่มีโค้ดติดต่อ cloud · 477 MiB พอดีกับ registry ที่งบสมมติไว้
+  - **Observed:** อัปเดต [P01-T03](P01-T03-system-structure.md) §7 และ §12 แล้ว — ปิดสองรายการที่ค้าง (ที่เก็บ artifact, วิธีนำเข้า container) และใส่ผลวัดจาก T09 ให้รายการ CPU/RAM ที่ยังเปิดอยู่
+  - **สิ่งที่แลกไป (บันทึกไว้):** image โตขึ้น 477 MiB → การ pull ตอน cold start หนักขึ้น **P04 ต้องวัด** · เปลี่ยน model ต้อง build ใหม่ไม่ใช่แก้ config · **failure demo ของคนที่ 3 ต้องเปลี่ยนวิธี** จากลบ blob เป็นแก้ไฟล์ในคอนเทนเนอร์หรือ deploy image ที่พังตั้งใจ
 - **ขึ้นกับ:** T06
+- **ส่งต่อให้ P04:** สูตร cold start = **477 MiB ÷ throughput ที่วัดได้** พร้อมตารางแทนค่า (50/100/200/500 MiB/s → 9.5/4.8/2.4/1.0 s) · **ไม่ใช่การอ้าง throughput ของ Azure ที่เราไม่ได้วัด** · ยังต้องตัดสิน CPU/RAM และจำนวน process/instance
+- **ส่งต่อให้คนที่ 3 (P05):** **ลบ blob ไม่ได้เพราะไม่มี blob** · วิธีที่ทำได้คือแก้ไฟล์ใน `model/` ของคอนเทนเนอร์ที่รันอยู่ (ใกล้เคียง disk corruption จริง) หรือ deploy image ที่ใส่ artifact ที่พังตั้งใจ · `manifest.json` มี sha256 ทุกไฟล์ให้ตรวจ แต่การเรียกตรวจตอน startup เป็นของ P03
+- **ข้อจำกัด:** **ตัดสินโดยไม่ได้ทดลองกับ Azure เลย** — ไม่มี `az` CLI และไม่มี credential ในเครื่อง และการสร้าง resource อยู่ใน P04 พร้อมเรื่อง credentials กับงบ · วางบนคุณสมบัติเชิงโครงสร้างและสมมติฐานงบที่ Proposal เขียนเอง **ไม่ใช่ผลทดลองบน cloud** · **ยังไม่รู้ว่า Azure Container Apps cache image layer ระหว่าง cold start อย่างไร** — ถ้า P04 พบว่าสมมติฐานนี้ผิดอย่างมีนัยสำคัญ **ให้กลับมาทบทวนการตัดสินนี้**
 
 ### P02-T11 — ตั้ง convention: Python version, dependency manager, lockfile
 
@@ -339,9 +350,9 @@ T11 (environment)  →  T01 (model)  →  T03 (เพดานข้อควา
 
 **สถานะรอบนี้:** **T04 `done`** — shared inference module พร้อม interface ที่ล็อกให้คนที่ 2 · **T05 `done`** — evaluate 14,640 แถวได้ **macro-F1 0.7606 / accuracy 0.8100** ยืนยันเลขด้วย scikit-learn และรันซ้ำจาก tree สะอาดได้เลขเดิมทุกหลัก · **T11 `done`** — uv + uv.lock + Python 3.13 เป็น convention ของทีม · รวม 27 tests ผ่านหมด · **T01 เสร็จ** — pin revision, ยืนยัน licence, อ่าน label mapping จาก config จริง, ยืนยันนิยาม `score` · **T02 เสร็จ** — pin dataset version 4, นิยาม evaluation set 14,640 แถว, ยืนยัน label ตรงกับ model · **T03 เสร็จ** — ล็อกเพดาน 510 content tokens และบันทึกกลับเข้า P01-T02 แล้ว **ปลด blocker ให้ P03** · หลักฐานทั้งสามอยู่ใน `reports/` · ยังไม่เขียนโค้ดใน `src/` (ตาม [P01-T03 §8](P01-T03-system-structure.md#8-หน้าที่ของเอกสารและการสร้างไฟล์) ที่ห้ามสร้างโฟลเดอร์เปล่ารอล่วงหน้า)
 
-**งานที่เหลือและ blocker:** T08 กับ T10 ยังเป็น `planned` · T01–T07, T09 และ T11 `done` · **ไม่มี blocker** · ผล evaluation ผูกกับ commit `40dcb77` ที่ tree สะอาด จึงใช้เป็น lineage ของ T07 และฐานเทียบของ T08 ได้แล้ว · T11 `in_progress` ปิดไม่ได้จนคนที่ 2 ยืนยัน convention · **ไม่มี blocker ที่หยุดงานฝั่งเราอยู่** · T10 รอมติทีมแต่บล็อกแค่คนที่ 2 ตอนนำ model เข้า container
+**งานที่เหลือและ blocker:** **เหลือ T08 เท่านั้น** · T01–T07, T09, T10 และ T11 `done` · ไม่มี blocker · **ไม่มี blocker** · ผล evaluation ผูกกับ commit `40dcb77` ที่ tree สะอาด จึงใช้เป็น lineage ของ T07 และฐานเทียบของ T08 ได้แล้ว · T11 `in_progress` ปิดไม่ได้จนคนที่ 2 ยืนยัน convention · **ไม่มี blocker ที่หยุดงานฝั่งเราอยู่** · T10 รอมติทีมแต่บล็อกแค่คนที่ 2 ตอนนำ model เข้า container
 
-**Next action:** **T10** (ตัดสินที่เก็บ artifact — มีข้อมูลครบแล้วจาก T06 ขนาด 477 MiB และ T09 เวลาเริ่มระบบ 2.9 วินาที) → ปิดด้วย **T08** (tolerance) ซึ่งต้องรันจาก fresh state และข้ามเครื่อง: ส่ง `pyproject.toml` กับ `uv.lock` ให้คนที่ 2 ยืนยัน T11 และขอมติ T10 · **rotate Kaggle token** เพราะค่าเดิมอยู่ใน transcript แล้ว
+**Next action:** **T08** (tolerance) เป็น task สุดท้ายของ P02 · ต้องรันจาก fresh state (ลบ `.venv` และ cache แล้วติดตั้งใหม่) และต้องพิจารณาว่าจะทดสอบข้ามเครื่องได้หรือไม่: ส่ง `pyproject.toml` กับ `uv.lock` ให้คนที่ 2 ยืนยัน T11 และขอมติ T10 · **rotate Kaggle token** เพราะค่าเดิมอยู่ใน transcript แล้ว
 
 ช่องว่างที่พบระหว่างอ่านเอกสาร P01 — **ยังไม่แก้ไฟล์ของคนอื่นในรอบนี้** ต้องคุยกันก่อน:
 
