@@ -1,0 +1,39 @@
+[project]
+name = "feedbackpulse"
+version = "0.1.0"
+description = "Backend API that classifies short English feedback as negative, neutral, or positive"
+requires-python = "==3.13.*"
+
+# Pinned exactly because the model output depends on these versions, so an
+# unnoticed upgrade would invalidate the recorded evaluation results (R1).
+dependencies = [
+  "torch==2.14.1",
+  "transformers==5.19.0",
+]
+
+[dependency-groups]
+dev = [
+  "pytest>=9.0",
+  "ruff>=0.15",
+]
+# Data preparation only. Kept out of [project.dependencies] so the API image in
+# P03-P04 does not ship a Kaggle client it never calls at inference time.
+# Not pinned exactly: it only fetches the dataset, which is itself pinned by
+# version and file hash, so its version cannot change a prediction.
+data = [
+  "kagglehub>=1.0.2",
+]
+
+[tool.pytest.ini_options]
+# src/ is not installed as a package (see [tool.uv] package = false), so tests
+# and the P03 API both import it from this path. In a container, set
+# PYTHONPATH=/app/src rather than installing a wheel.
+pythonpath = ["src"]
+testpaths = ["tests"]
+
+[tool.uv]
+# Scripts and modules only; nothing here is built or published as a wheel.
+package = false
+# Local work gets every group. For the lean runtime set that P03-P04 should put
+# in the container, use: uv sync --no-default-groups
+default-groups = ["dev", "data"]
