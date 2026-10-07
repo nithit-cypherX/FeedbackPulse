@@ -19,24 +19,51 @@ def test_entry_keeps_its_own_copy_of_the_evaluation(tmp_path, monkeypatch):
     monkeypatch.setattr(registry, "EVALUATION_RESULT", evaluation)
     monkeypatch.setattr(registry, "LOCKFILE", evaluation)
 
+    snapshot_name = "run-20260101T000000Z-abcdef-evaluation.json"
     lineage = {
         "artifact": {"artifact_id": "sentiment-aaaaaaaaaaaa"},
-        "evaluation": {"result_file": "placeholder", "result_sha256": "x"},
+        "evaluation": {"result_file": snapshot_name, "result_sha256": "x"},
     }
     monkeypatch.setattr(registry, "build_lineage", lambda _: lineage)
 
     registry_dir = tmp_path / "registry"
     path = registry.register(tmp_path / "artifact", registry_dir=registry_dir)
     entry = json.loads(path.read_text(encoding="utf-8"))
-    version = entry["model_version"]
 
-    snapshot = registry_dir / f"{version}-evaluation.json"
+    snapshot = registry_dir / snapshot_name
     assert snapshot.exists()
-    assert entry["lineage"]["evaluation"]["result_file"] == snapshot.name
+    assert entry["lineage"]["evaluation"]["result_file"] == snapshot_name
 
     # Overwriting the shared file must not break the entry.
     evaluation.write_text(json.dumps({"macro_f1": 0.9}), encoding="utf-8")
     assert json.loads(snapshot.read_text(encoding="utf-8"))["macro_f1"] == 0.5
+
+
+def test_entry_can_verify_its_own_version(tmp_path, monkeypatch):
+    """The first link of the traceability chain.
+
+    The version is a digest over the lineage, so the lineage that gets stored
+    must be the one that was hashed. Filling a field in afterwards broke this
+    once and the entry could no longer prove its own version.
+    """
+    evaluation = tmp_path / "result.json"
+    evaluation.write_text(json.dumps({"macro_f1": 0.5}), encoding="utf-8")
+    monkeypatch.setattr(registry, "EVALUATION_RESULT", evaluation)
+
+    lineage = {
+        "artifact": {"artifact_id": "sentiment-aaaaaaaaaaaa"},
+        "evaluation": {"result_file": "run-20260101T000000Z-abcdef-evaluation.json"},
+    }
+    monkeypatch.setattr(registry, "build_lineage", lambda _: lineage)
+
+    registry_dir = tmp_path / "registry"
+    path = registry.register(tmp_path / "artifact", registry_dir=registry_dir)
+    entry = json.loads(path.read_text(encoding="utf-8"))
+
+    recomputed = registry.model_version_for(
+        entry["lineage"]["artifact"]["artifact_id"], entry["lineage"]
+    )
+    assert recomputed == entry["model_version"]
 
 
 def test_missing_entry_is_reported(tmp_path):

@@ -127,12 +127,13 @@ def build_lineage(artifact_dir: Path) -> dict:
             "packages": evaluation["inputs"]["versions"],
         },
         "evaluation": {
-            # Relative to the entry, because the shared path is overwritten by
-            # the next run. An entry that pointed at that path stopped being
-            # traceable the moment anyone re-ran the evaluation, which would
-            # leave a rolled-back version with lineage nobody can check.
-            # Replaced with the real filename in register().
-            "result_file": None,
+            # Named after the run rather than the version, so it is known before
+            # the digest is computed. Naming it after the version meant filling
+            # it in afterwards, which left the stored lineage different from the
+            # one that was hashed, and an entry that could not verify its own
+            # version. Relative to the entry because the shared path below is
+            # overwritten by the next run.
+            "result_file": f"{evaluation['run']['run_id']}-evaluation.json",
             "produced_from": str(EVALUATION_RESULT),
             "result_sha256": _sha256_file(EVALUATION_RESULT),
             "run_id": evaluation["run"]["run_id"],
@@ -152,9 +153,10 @@ def register(artifact_dir: Path, registry_dir: Path = REGISTRY_DIR) -> Path:
 
     # The entry keeps its own copy of the evaluation it was built from, so it
     # stays verifiable after the next run overwrites the shared result file.
-    snapshot = registry_dir / f"{version}-evaluation.json"
-    shutil.copyfile(EVALUATION_RESULT, snapshot)
-    lineage["evaluation"]["result_file"] = snapshot.name
+    # The name comes from the lineage, which is not touched after hashing.
+    shutil.copyfile(
+        EVALUATION_RESULT, registry_dir / lineage["evaluation"]["result_file"]
+    )
 
     entry = {"model_version": version, "lineage": lineage}
     path = registry_dir / f"{version}.json"

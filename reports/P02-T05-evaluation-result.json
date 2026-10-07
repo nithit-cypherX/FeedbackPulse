@@ -57,7 +57,7 @@
     "dataset_path": "data/Tweets.csv",
     "dataset_sha256": "ea94b23f41892b290dec3330bb8cf9cb6b8bc669eaae5f3a84c40f7b0de8f15e",
     "code": {
-      "commit": "f282addcfa0b7d73e2b432c7b2cc55b9f4d9128f",
+      "commit": "3b8e584ff9ebc505c7bc1ab478e6b930eca7ff6e",
       "dirty": false,
       "uncommitted": []
     },
@@ -70,7 +70,8 @@
     }
   },
   "run": {
-    "finished_utc": "2026-10-07T12:45:03+00:00",
-    "seconds": 674.2
+    "run_id": "run-20261007T170404Z-3f2f98",
+    "finished_utc": "2026-10-07T17:09:35+00:00",
+    "seconds": 330.9
   }
 }
