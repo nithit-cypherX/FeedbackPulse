@@ -6,7 +6,8 @@ does not change the code, so it must not raise the flag — otherwise every repe
 run in T08 would look unreproducible.
 """
 
-from feedbackpulse.evaluate import uncommitted_inputs
+from feedbackpulse import gitinfo
+from feedbackpulse.gitinfo import uncommitted_inputs
 
 
 def test_clean_tree_has_no_uncommitted_inputs():
@@ -45,3 +46,25 @@ def test_rename_into_outputs_from_an_input_still_counts():
 
 def test_rename_inside_outputs_does_not_count():
     assert uncommitted_inputs("R  reports/a.md -> reports/b.md") == []
+
+
+def test_status_is_read_without_stripping_the_leading_column(monkeypatch):
+    """A worktree-only change starts its status line with a space.
+
+    Stripping the command output shifts every column left, and the parsed path
+    then loses its first character. Reported paths end up in the recorded
+    evaluation result, so a mangled one would misname what was uncommitted.
+    """
+    captured = {}
+
+    def fake_git(*args, strip=True):
+        if args[0] == "status":
+            captured["strip"] = strip
+            return " M src/feedbackpulse/inference.py"
+        return "0" * 40
+
+    monkeypatch.setattr(gitinfo, "_git", fake_git)
+    result = gitinfo.code_version()
+    assert captured["strip"] is False
+    assert result["uncommitted"] == ["src/feedbackpulse/inference.py"]
+    assert result["dirty"] is True

@@ -13,63 +13,16 @@ covers the test run, not this module.
 """
 
 import json
-import subprocess
 import sys
 import time
 from datetime import UTC, datetime
 from pathlib import Path
 
-from feedbackpulse import dataset, model_files
+from feedbackpulse import dataset, gitinfo, model_files
 from feedbackpulse.evaluation import evaluate
 from feedbackpulse.inference import SentimentClassifier
 
 RESULT_PATH = Path("reports/P02-T05-evaluation-result.json")
-
-
-# Everything this project writes as a result rather than reads as an input.
-# Changes here must not mark a run dirty: the question the flag answers is
-# whether the code and configuration behind the numbers were committed, and a
-# previous result file sitting uncommitted says nothing about that.
-_OUTPUT_PREFIXES = ("reports/",)
-
-
-def uncommitted_inputs(porcelain_status: str) -> list[str]:
-    """Paths from `git status --porcelain` that count as uncommitted inputs."""
-    paths = []
-    for line in porcelain_status.splitlines():
-        if not line.strip():
-            continue
-        # Porcelain v1: two status characters, a space, then the path. A rename
-        # reads "old -> new", and either side changing is a real change.
-        candidates = [part.strip().strip('"') for part in line[3:].split(" -> ")]
-        if any(not path.startswith(_OUTPUT_PREFIXES) for path in candidates if path):
-            paths.append(line[3:])
-    return paths
-
-
-def _code_version() -> dict:
-    """Record the commit and whether the inputs behind this run were committed.
-
-    A dirty tree means the run cannot be reproduced from the commit alone, so it
-    is recorded rather than hidden.
-    """
-    try:
-        commit = subprocess.run(
-            ["git", "rev-parse", "HEAD"],
-            capture_output=True,
-            text=True,
-            check=True,
-        ).stdout.strip()
-        status = subprocess.run(
-            ["git", "status", "--porcelain"],
-            capture_output=True,
-            text=True,
-            check=True,
-        ).stdout.strip()
-    except (OSError, subprocess.CalledProcessError):
-        return {"commit": None, "dirty": None, "uncommitted": None}
-    dirty_paths = uncommitted_inputs(status)
-    return {"commit": commit, "dirty": bool(dirty_paths), "uncommitted": dirty_paths}
 
 
 def _package_versions() -> dict:
@@ -114,7 +67,7 @@ def run(classifier: SentimentClassifier, dataset_path=dataset.LOCAL_PATH) -> dic
         "dataset_handle": dataset.DATASET_HANDLE,
         "dataset_path": str(dataset_path),
         "dataset_sha256": dataset_hash,
-        "code": _code_version(),
+        "code": gitinfo.code_version(),
         "versions": _package_versions(),
     }
     result["run"] = {
