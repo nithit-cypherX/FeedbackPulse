@@ -103,3 +103,24 @@ def test_label_never_predicted_gets_zero_instead_of_an_error():
 def test_empty_input_is_rejected():
     with pytest.raises(ValueError):
         evaluate([], LABELS)
+
+
+def test_aggregate_metrics_alone_cannot_detect_swapped_rows():
+    """Why the evaluation records a per-row fingerprint as well.
+
+    These two runs disagree on every row involved, yet every aggregate number
+    matches, because the errors cancel. Comparing metrics across runs would call
+    this reproducible; comparing predictions row by row would not.
+    """
+    first = [("negative", "neutral"), ("neutral", "negative")]
+    second = [("negative", "negative"), ("neutral", "neutral")]
+    assert first != second
+
+    swapped = evaluate(first, LABELS)
+    matched = evaluate(second, LABELS)
+    assert swapped["accuracy"] != matched["accuracy"]
+
+    # The case the fingerprint is really for: same counts, different rows.
+    run_a = [("negative", "neutral"), ("neutral", "negative")]
+    run_b = [("neutral", "negative"), ("negative", "neutral")]
+    assert evaluate(run_a, LABELS)["confusion"] == evaluate(run_b, LABELS)["confusion"]

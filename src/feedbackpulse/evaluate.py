@@ -12,6 +12,7 @@ reports/P02-T04-inference-interface.md. The pytest `pythonpath` setting only
 covers the test run, not this module.
 """
 
+import hashlib
 import json
 import sys
 import time
@@ -46,6 +47,11 @@ def run(classifier: SentimentClassifier, dataset_path=dataset.LOCAL_PATH) -> dic
 
     pairs = []
     skipped = []
+    # Fingerprint of every prediction in row order. Aggregate metrics can match
+    # across two runs while individual rows differ, if the differences cancel
+    # out; this catches that, which is what reproducibility actually claims.
+    # repr() of the score so the comparison is over the float's exact bits.
+    fingerprint = hashlib.sha256()
     started = time.perf_counter()
     for index, (text, true_label) in enumerate(dataset.read_rows(dataset_path)):
         try:
@@ -53,12 +59,17 @@ def run(classifier: SentimentClassifier, dataset_path=dataset.LOCAL_PATH) -> dic
         except ValueError as exc:
             # Recorded, not silently dropped: a skipped row changes the totals.
             skipped.append({"row": index, "reason": str(exc)})
+            fingerprint.update(f"{index}\tskipped\n".encode())
             continue
         pairs.append((true_label, prediction.sentiment))
+        fingerprint.update(
+            f"{index}\t{prediction.sentiment}\t{prediction.score!r}\n".encode()
+        )
     elapsed = time.perf_counter() - started
 
     result = evaluate(pairs, classifier.labels)
     result["skipped"] = skipped
+    result["predictions_sha256"] = fingerprint.hexdigest()
     result["inputs"] = {
         "model_repo": model_files.MODEL_REPO,
         "model_revision": model_files.MODEL_REVISION,
@@ -92,6 +103,7 @@ def main() -> None:
 
     print(f"rows evaluated : {result['total']:,}")
     print(f"rows skipped   : {len(result['skipped'])}")
+    print(f"predictions    : {result['predictions_sha256'][:16]}...")
     print(f"accuracy       : {result['accuracy']:.4f}")
     print(f"macro F1       : {result['macro_f1']:.4f}")
     for label in classifier.labels:
