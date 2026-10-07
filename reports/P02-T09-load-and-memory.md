@@ -1,7 +1,7 @@
 # P02-T09 — เวลาโหลดและหน่วยความจำ
 
 - Task: [P02-T09 ใน phase plan](../docs/plans/P02-model-pipeline.md) · ข้อกำหนด: [P01-T03 §5](../docs/plans/P01-T03-system-structure.md#5-เหตุผลและข้อแลกเปลี่ยน) ที่ระบุว่า "ต้องวัด RAM และเวลาเริ่มระบบใน P02–P03"
-- วัดเมื่อ: 2026-10-07 · artifact `sentiment-6e7ff9fbc17c` · `model_version` `sentiment-6e7ff9fbc17c-c18ecbc6`
+- วัดเมื่อ: 2026-10-07 · artifact `sentiment-6e7ff9fbc17c` · `model_version` `sentiment-6e7ff9fbc17c-32855c02`
 - เครื่อง: **macOS 15.5 arm64** · Python 3.13.11 · `torch 2.14.1` · `transformers 5.19.0`
 
 > **ตัวเลขทั้งหมดวัดบน macOS arm64 ไม่ใช่ใน container บน Azure** · ใช้เป็นจุดเริ่มต้นสำหรับการ sizing ไม่ใช่ค่าที่ยืนยันสำหรับ production — ดูข้อจำกัดในส่วนที่ 5

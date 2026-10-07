@@ -1,8 +1,8 @@
 # P02-T07 — `model_version` และ lineage
 
 - Task: [P02-T07 ใน phase plan](../docs/plans/P02-model-pipeline.md) · ข้อตกลง API: [P01-T02 §3](../docs/plans/P01-T02-api-contract.md#3-request-และ-response) · เกณฑ์: **R1** ใน [P01-T03 §9](../docs/plans/P01-T03-system-structure.md#9-จุดตรวจและหลักฐานตามเกณฑ์อาจารย์)
-- รันเมื่อ: 2026-10-07 · version แรกที่ออก: `sentiment-6e7ff9fbc17c-c18ecbc6`
-- Registry entry: [`reports/registry/sentiment-6e7ff9fbc17c-c18ecbc6.json`](registry/sentiment-6e7ff9fbc17c-c18ecbc6.json)
+- รันเมื่อ: 2026-10-07 · version แรกที่ออก: `sentiment-6e7ff9fbc17c-32855c02`
+- Registry entry: [`reports/registry/sentiment-6e7ff9fbc17c-32855c02.json`](registry/sentiment-6e7ff9fbc17c-32855c02.json) พร้อมสำเนาผล evaluation ของตัวเองข้าง ๆ
 
 ---
 
@@ -15,7 +15,7 @@ R1 ต้องย้อนจาก model ที่ deploy ไปหา **code,
 ## 2. Scheme ที่ล็อก
 
 ```
-sentiment-6e7ff9fbc17c-c18ecbc6
+sentiment-6e7ff9fbc17c-32855c02
 │         │             │
 │         │             lineage digest 8 ตัว — sha256 ของ lineage record ทั้งก้อน
 │         │             (code commit, environment, dataset, ผล evaluation)
@@ -63,7 +63,7 @@ model family — อ่านออกใน log และใน response body
 
 ## 4. ผล Check — ไล่ย้อนจาก `model_version` ค่าเดียว
 
-เริ่มจากสตริง `sentiment-6e7ff9fbc17c-c18ecbc6` อย่างเดียว แล้วไล่ย้อนทุกชั้น โดย**คำนวณ hash จากไฟล์จริงทุกตัว ไม่ใช่อ่านค่าที่บันทึกไว้มาเทียบกับตัวเอง**
+เริ่มจากสตริง `sentiment-6e7ff9fbc17c-32855c02` อย่างเดียว แล้วไล่ย้อนทุกชั้น โดย**คำนวณ hash จากไฟล์จริงทุกตัว ไม่ใช่อ่านค่าที่บันทึกไว้มาเทียบกับตัวเอง**
 
 | ชั้น | ตรวจอะไร | ผล |
 |---|---|---|
@@ -85,6 +85,8 @@ model family — อ่านออกใน log และใน response body
 **`model_version` เป็น input ของ `SentimentClassifier.load()` ไม่ใช่ค่าที่โมดูลหาเอง** — ตรงตามที่ [P02-T04](P02-T04-inference-interface.md) ล็อกไว้ · **P03 ต้องอ่านค่าจาก registry entry หรือจาก configuration แล้วส่งเข้าไป** ไม่ใช่ hardcode
 
 **ยังไม่มีการตรวจว่า version ที่ deploy ตรงกับ artifact ที่โหลดจริง** — `load()` รับ `model_version` ที่ส่งมาเฉย ๆ ถ้า P03 ส่งค่าผิด API จะคืนค่าผิดโดยไม่มีอะไรจับได้ · registry entry มี hash ของทุกไฟล์ให้ตรวจได้ แต่ **การเรียกตรวจตอน startup เป็นของ P03** ตาม [P01-T02 §4](../docs/plans/P01-T02-api-contract.md#4-validation-และ-error-handling) และการตัดสินว่าอะไรนับเป็น artifact ใช้ไม่ได้เป็นของ P05 — P02 ไม่เขียนฟังก์ชันตรวจไว้ล่วงหน้าเพราะยังไม่มีผู้ใช้และจะต้องเดา call site กับ error semantics ของเขา
+
+**แก้ข้อบกพร่องที่พบตอน T08 (2026-10-07):** entry เดิมบันทึกผล evaluation ด้วย **path ที่ใช้ร่วมกัน** (`reports/P02-T05-evaluation-result.json`) ซึ่งถูกเขียนทับทุกรอบ · version แรกที่ออก (`…-c18ecbc6`) จึง **trace ไม่ได้ทันทีที่รัน evaluation ซ้ำใน T08** — hash ที่บันทึกไว้ไม่ตรงกับไฟล์ใด · ถ้า rollback ไป version นั้นจะได้ lineage ที่ตรวจไม่ได้ ซึ่งตรงข้ามกับที่ R2 ต้องการ · **แก้แล้ว: แต่ละ entry คัดลอกผล evaluation ของตัวเองไว้ข้าง ๆ เป็น `<version>-evaluation.json`** พร้อม test ที่เขียนทับไฟล์กลางแล้วยืนยันว่า entry ยัง resolve ได้ · version เดิมถูกลบเพราะสำเนาถูกเขียนทับไปก่อนที่จะพบปัญหาและกู้คืนไม่ได้ จึงเป็น entry ที่อ้างสิ่งที่พิสูจน์ไม่ได้อีก — ไม่เคย deploy ที่ไหน และ git history เก็บบันทึกไว้ว่ามีอยู่
 
 **registry เป็นไฟล์ใน Git ไม่ใช่บริการ** — เลือกแบบนี้เพราะยังไม่ตัดสินบริการเก็บ artifact (T10) และไฟล์ใน Git ก็ตรวจย้อนได้ตามที่ R1 ต้องการ · ถ้า T10 เลือกบริการที่มี registry ของตัวเอง entry พวกนี้ยังใช้เป็นบันทึกอ้างอิงได้ **ยังไม่ได้ประเมินว่าจะย้ายหรือทำสองที่**
 
