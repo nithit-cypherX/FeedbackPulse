@@ -14,13 +14,72 @@
 
 ## 2. วิธีวัด
 
-```bash
-PYTHONPATH=src uv run python -m feedbackpulse.measure
+**แต่ละ sample รันใน process ใหม่** เพราะการโหลดซ้ำใน process เดียวจะใช้ allocator ที่อุ่นแล้วและไฟล์ที่ map อยู่แล้ว ซึ่งจะรายงานเวลาโหลดถูกกว่าครั้งแรกที่ container เจอจริง · ใช้ 5 samples
+
+**หน่วยความจำรายงานเป็น peak RSS** (`ru_maxrss`) เพราะ container limit ตั้งจากค่าสูงสุดไม่ใช่ค่าปัจจุบัน
+
+> ⚠️ **`ru_maxrss` เป็น bytes บน macOS แต่เป็น kilobytes บน Linux** · ถ้าใช้หน่วยผิดตัวเลขจะคลาดไป **1024 เท่า** ในค่าที่ใช้ตั้ง memory limit และจะมองไม่เห็นเพราะผลลัพธ์ยังดูเป็นตัวเลขปกติ · สคริปต์ด้านล่างแปลงตาม platform ให้แล้ว **อย่าตัดบรรทัดนั้นออก**
+
+### สคริปต์ที่ใช้วัด
+
+ไม่ได้เก็บเป็น module ใน `src/` เพราะไม่ใช่โค้ดที่ระบบใช้ทำงาน · บันทึกไว้ที่นี่ให้ copy ไปรันซ้ำได้ รวมถึงรันในคอนเทนเนอร์ของ P03–P04
+
+บันทึกเป็น `measure_once.py` แล้วรัน **5 รอบ รอบละ process ใหม่**:
+
+```python
+import json, resource, statistics, sys, time
+from pathlib import Path
+
+def peak_rss_bytes() -> int:
+    raw = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+    return raw if sys.platform == "darwin" else raw * 1024   # macOS: bytes, Linux: KiB
+
+PROBE = ["My flight was delayed and nobody helped me.",
+         "The staff were helpful.", "The flight landed at 6pm."]
+
+baseline = peak_rss_bytes()
+
+started = time.perf_counter()
+import torch, transformers                      # noqa: F401
+from feedbackpulse.inference import SentimentClassifier
+import_done = time.perf_counter()
+after_import = peak_rss_bytes()
+
+clf = SentimentClassifier.load(Path(sys.argv[1]), model_version="measure")
+loaded = time.perf_counter()
+after_load = peak_rss_bytes()
+
+latencies = []
+for i in range(30):
+    start = time.perf_counter()
+    clf.predict(PROBE[i % len(PROBE)])
+    latencies.append(time.perf_counter() - start)
+
+print(json.dumps({
+    "framework_import_seconds": round(import_done - started, 3),
+    "weights_load_seconds": round(loaded - import_done, 3),
+    "total_startup_seconds": round(loaded - started, 3),
+    "framework_bytes_peak_delta": after_import - baseline,
+    "weights_bytes_peak_delta": after_load - after_import,
+    "peak_rss_after_load_bytes": after_load,
+    "peak_rss_after_predictions_bytes": peak_rss_bytes(),
+    "predict_median_ms": round(statistics.median(latencies) * 1000, 2),
+}))
 ```
 
-**แต่ละ sample รันใน process ใหม่** เพราะการโหลดซ้ำใน process เดียวจะใช้ allocator ที่อุ่นแล้วและไฟล์ที่ map อยู่แล้ว ซึ่งจะรายงานเวลาโหลดถูกกว่าครั้งแรกที่ container เจอจริง · 5 samples
+```bash
+# ในเครื่อง
+for i in 1 2 3 4 5; do
+  PYTHONPATH=src uv run python measure_once.py artifacts/<artifact_id>/model
+done
 
-**หน่วยความจำรายงานเป็น peak RSS** (`ru_maxrss`) เพราะ container limit ตั้งจากค่าสูงสุดไม่ใช่ค่าปัจจุบัน · `ru_maxrss` เป็น **bytes บน macOS แต่เป็น kilobytes บน Linux** — โค้ดแปลงตาม platform เพราะถ้าผิดจะคลาดไป 1024 เท่าในตัวเลขที่ใช้ sizing
+# ในคอนเทนเนอร์ของ P03-P04
+for i in 1 2 3 4 5; do
+  PYTHONPATH=/app/src python measure_once.py /app/artifacts/<artifact_id>/model
+done
+```
+
+แยกเวลา import framework ออกจากเวลาอ่าน weights เพราะสองช่วงนี้โตไม่เหมือนกัน · ส่วนการวัดตามความยาวข้อความ ใช้สคริปต์เดียวกันแต่เปลี่ยน `PROBE` เป็นข้อความที่ยาวถึงเพดาน (`"ok " * 509` ให้ 510 content tokens)
 
 ## 3. ได้ผลอะไร
 
@@ -102,7 +161,7 @@ Check ของ T09 คือ "วัดซ้ำได้ผลใกล้เ�
 
 - **sizing memory ที่ ~750 MiB ไม่ใช่ 341 MiB** · [Proposal §6](../PROPOSAL.md#6-cost-estimate) สมมติไว้ 2 vCPU / 4 GiB ซึ่ง**เหลือที่เยอะ** — ถ้าจะลดเพื่อประหยัดงบ อย่าลดต่ำกว่าราว 1 GiB โดยไม่ทดสอบ
 - **เวลาเริ่มระบบ ~2.9 วินาที** เป็นค่าบนเครื่องนี้ซึ่งไฟล์อยู่ในเครื่องแล้ว · **ไม่รวมเวลาดึง artifact จากที่เก็บ** ซึ่งขึ้นกับการตัดสินใน T10 · cold start จริงจะยาวกว่านี้ และ Proposal §3 ระบุว่าต้องรายงาน cold start แยก
-- **รันคำสั่งเดียวกันใน container ได้**: `PYTHONPATH=/app/src python -m feedbackpulse.measure` · โค้ดแปลงหน่วย `ru_maxrss` ตาม platform ให้แล้ว
+- **ใช้สคริปต์เดียวกันในคอนเทนเนอร์ได้** — อยู่ในส่วนที่ 2 ของรายงานนี้ · **ระวังหน่วย `ru_maxrss` ที่ต่างกันระหว่าง macOS กับ Linux** ถ้าเขียนเองแล้วพลาดจุดนั้นตัวเลขจะคลาด 1024 เท่า
 - **ทดสอบเป้า p95 ด้วยข้อความยาวด้วย ไม่ใช่แค่ข้อความสั้น** เพราะต่างกัน 3.6 เท่า
 
 **ส่งต่อให้ T10:** เวลาอ่าน weights 1.3 วินาทีไม่ขึ้นกับรูปแบบไฟล์ แต่**ขึ้นกับว่าไฟล์อยู่ที่ไหน** · ถ้าเลือกดาวน์โหลดตอน start เวลาดึง 476 MiB จะเข้ามาเพิ่มในเวลาเริ่มระบบ ซึ่งเป็น trade-off ที่ T10 ต้องชั่ง
