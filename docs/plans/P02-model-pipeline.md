@@ -2,13 +2,13 @@
 
 - แผนหลัก: [Overview plan](../../overview-plan.md) · ขอบเขตโครงการ: [Proposal](../../PROPOSAL.md)
 - ข้อตกลงที่ต้องทำตาม: [P01-T02 API contract](P01-T02-api-contract.md) · [P01-T03 System structure](P01-T03-system-structure.md)
-- สถานะ P02: `in_progress` — T01–T06 และ T11 `done` · T07–T10 `planned`
+- สถานะ P02: `in_progress` — T01–T07 และ T11 `done` · T08–T10 `planned`
 - เจ้าของ: คนที่ 1 — Model และ evaluation (ตาม [overview](../../overview-plan.md))
 - อัปเดต: 2026-10-07
 
 **การเปลี่ยนอำนาจตัดสินใจ (ผู้ใช้สั่งเมื่อ 2026-10-07):** เรื่องที่แผนเดิมเขียนว่า *รอมติทีม* หรือ *รอคนที่ 2 ยืนยัน* เปลี่ยนเป็น **คนที่ 1 ตัดสินเอง แล้วคนที่ 2 รับไปทำต่อโดยอิงการตัดสินนี้** · กระทบ T04, T10 และ T11 · บันทึกไว้เพื่อให้เห็นว่าเป็นการเปลี่ยนขอบเขตที่ได้รับอนุญาต ไม่ใช่การลดเกณฑ์เพื่อปิด task · **เกณฑ์ทางเทคนิคอื่นไม่เปลี่ยน** — task ที่ยังตรวจไม่ได้ก็ยังปิดไม่ได้
 
-ไฟล์นี้เป็น **แผนของ phase P02** พร้อมบันทึกความคืบหน้าจริง · **เสร็จแล้ว 7 task:** [T01](../../reports/P02-T01-model-provenance.md), [T02](../../reports/P02-T02-evaluation-dataset.md), [T03](../../reports/P02-T03-text-length-cap.md), [T04](../../reports/P02-T04-inference-interface.md), [T05](../../reports/P02-T05-evaluation.md), [T06](../../reports/P02-T06-artifact-layout.md) และ T11 · T07–T10 ยังเป็น `planned` และช่อง "ผลจริง" ยังเป็น *ยังไม่รัน*
+ไฟล์นี้เป็น **แผนของ phase P02** พร้อมบันทึกความคืบหน้าจริง · **เสร็จแล้ว 8 task:** [T01](../../reports/P02-T01-model-provenance.md), [T02](../../reports/P02-T02-evaluation-dataset.md), [T03](../../reports/P02-T03-text-length-cap.md), [T04](../../reports/P02-T04-inference-interface.md), [T05](../../reports/P02-T05-evaluation.md), [T06](../../reports/P02-T06-artifact-layout.md), [T07](../../reports/P02-T07-model-version-lineage.md) และ T11 · T08–T10 ยังเป็น `planned` และช่อง "ผลจริง" ยังเป็น *ยังไม่รัน*
 
 ---
 
@@ -45,7 +45,7 @@
 
 ## 2. Tasks และ verification
 
-T07–T10 สถานะ `planned` ช่อง "ผลจริง" = ยังไม่รัน · **T01–T06 และ T11 `done`** มีผลจริงบันทึกไว้ · ค่าที่ต้องวัด (metric, เพดานความยาวข้อความ, tolerance, RAM, เวลาโหลด) เขียนไว้เป็นสิ่งที่ต้องวัดแล้วบันทึก **ไม่ใส่ตัวเลขคาดเดาล่วงหน้า**
+T08–T10 สถานะ `planned` ช่อง "ผลจริง" = ยังไม่รัน · **T01–T07 และ T11 `done`** มีผลจริงบันทึกไว้ · ค่าที่ต้องวัด (metric, เพดานความยาวข้อความ, tolerance, RAM, เวลาโหลด) เขียนไว้เป็นสิ่งที่ต้องวัดแล้วบันทึก **ไม่ใส่ตัวเลขคาดเดาล่วงหน้า**
 
 **ลำดับการทำงาน ไม่ใช่เรียงตามหมายเลข** — ID คงที่ตามที่ตั้งไว้ แต่ลำดับจริงคือ:
 
@@ -210,7 +210,7 @@ T11 (environment)  →  T01 (model)  →  T03 (เพดานข้อควา
 
 ### P02-T07 — Lock lineage metadata และ `model_version` scheme
 
-- **สถานะ:** `planned`
+- **สถานะ:** `done` — scheme ล็อกแล้ว และผ่าน Check ไล่ย้อนครบ 26/26
 - **งาน:** กำหนดรูปแบบ `model_version` ที่ API จะคืน และ metadata ที่ทำให้ย้อนกลับไปหาต้นทางได้
 - **Done when:**
   - `model_version` ย้อนกลับไปหา **code, evaluation data, model revision ต้นทาง, ผล evaluation, run ID และ environment** ได้ ตาม R1 และ [P01-T02 §3](P01-T02-api-contract.md#3-request-และ-response) ที่กำหนดว่าต้องเป็น "รุ่นของ model artifact ที่กำลังใช้งานจริง... ไม่ใช่ชื่อเวอร์ชันตัวอย่างที่ใส่ค้างไว้"
@@ -218,8 +218,19 @@ T11 (environment)  →  T01 (model)  →  T03 (เพดานข้อควา
   - ส่วน environment ใช้ค่าที่ T11 กำหนด (Python version + lockfile) — Proposal §4 สั่งให้ version environment ด้วย แต่ตาราง R1 ใน P01-T03 §9 ไม่ได้ระบุไว้ ดู §5 ข้อ 9
   - **แจ้ง scheme ที่ตกลงให้คนที่ 2** เพราะ API ต้องคืนค่านี้
 - **Check:** หยิบ `model_version` หนึ่งค่าแล้วไล่ย้อนไปถึงไฟล์/commit/รายงานต้นทางได้ครบทุกชั้น
-- **ผลจริง:** ยังไม่รัน
+- **ผลจริง (รัน 2026-10-07):** หลักฐานใน [reports/P02-T07-model-version-lineage.md](../../reports/P02-T07-model-version-lineage.md) · version แรก `sentiment-6e7ff9fbc17c-c18ecbc6`
+  - **Decision (scheme):** `sentiment-<artifact_id>-<lineage digest 8 ตัว>` · 3 ส่วนเพราะ `artifact_id` ตรงกลางทำให้เห็นทันทีว่าสอง release ใช้ weights ชุดเดียวกันหรือไม่ ซึ่งต้องอ่านเร็วตอน rollback (R2) · **content-addressed ไม่ใช่ตัวนับ** จึงไม่ต้องมีทะเบียนกลางแจกเลข (สำคัญเพราะยังไม่เลือกบริการเก็บใน T10)
+  - **Decision:** digest ครอบ **code commit และ environment ไม่ใช่แค่ weights** เพราะ `predict()` ขึ้นกับโค้ดของเราด้วย ถ้าเปลี่ยน preprocessing แล้ว version ไม่เปลี่ยน version นั้นจะโกหก
+  - **Observed:** lineage record ที่ `reports/registry/<version>.json` เก็บ 6 ส่วน — artifact (+ hash ทุกไฟล์), source_model (+ hash ต้นทางรวม `pytorch_model.bin`), evaluation_data, code commit, environment (+ hash ของ `uv.lock`), evaluation (+ hash ของไฟล์ผล) · **ไม่บันทึกที่เก็บหรือ URL** เพื่อไม่ผูกกับ T10
+  - **Observed (guard ทำงานจริง):** `register()` ปฏิเสธรอบแรกเพราะตรวจพบว่า `inference.py` และ `evaluate.py` เปลี่ยนไปตั้งแต่ commit `40dcb77` ที่ eval รอบก่อนรัน → **บังคับให้รัน evaluation ใหม่** ก่อนออก version
+  - **Observed (Check):** เริ่มจากสตริง `model_version` ค่าเดียว ไล่ย้อน 8 ชั้น **ผ่าน 26/26** โดย**คำนวณ hash จากไฟล์จริงทุกตัว** ไม่ใช่อ่านค่าที่บันทึกมาเทียบกับตัวเอง — artifact 7/7 · ไฟล์ต้นทาง 7/7 · dataset 2/2 · code 3/3 (commit มีจริง, อยู่ในสาย HEAD, ไฟล์ตัดสินผลไม่เปลี่ยน) · `uv.lock` · ผล evaluation 3/3 · โหลดแล้วทำนายได้และคืน version นี้
+  - **Observed:** ผล evaluation **เหมือนกัน 3 รอบติด** ที่ commit `40dcb77` / `35e881f` / `ad382f1` ทุก metric และ confusion matrix ตรงทุกหลัก ต่างแค่เวลา 648.1 / 674.1 / 678.9 วินาที → ยืนยันว่าการแก้ `tokenizer.model_max_length` **ไม่เปลี่ยนผลทำนาย**
+  - **Observed (bug ที่เจอและแก้):** `_git()` ทำ `.strip()` กับ porcelain output ซึ่งกินช่องว่างนำหน้าของบรรทัดแรก ทำให้ path ที่ parse ได้หายตัวอักษรแรก (`src/...` → `rc/...`) · อยู่ใน code ที่ commit ไปแล้วตอน T05 · แก้แล้วพร้อม regression test
+  - **Observed:** ย้าย git helper ไป `gitinfo.py` เพื่อให้ eval result และ registry entry ตอบ "commit ไหน" แบบเดียวกัน ไม่มีตรรกะซ้ำสองที่
 - **ขึ้นกับ:** T06
+- **ส่งต่อให้ P03:** ต้อง**อ่าน `model_version` จาก registry entry หรือ configuration แล้วส่งเข้า `load()`** ไม่ hardcode · `load()` รับค่าที่ส่งมาเฉย ๆ ถ้าส่งผิด API จะคืนค่าผิดโดยไม่มีอะไรจับได้ — registry มี hash ทุกไฟล์ให้ตรวจ แต่**การเรียกตรวจตอน startup เป็นของ P03** ไม่ใช่ P02
+- **ส่งต่อให้ P04:** ตอนนี้มี version เดียว และ `main()` ปฏิเสธถ้าเจอ artifact มากกว่าหนึ่งชุดแทนที่จะเดา · การจัดการหลาย version พร้อมกันจำเป็นตอน rollback ซึ่งยังไม่ได้ออกแบบ
+- **ส่งต่อให้ T10:** registry เป็นไฟล์ใน Git ไม่ใช่บริการ · ถ้า T10 เลือกบริการที่มี registry ของตัวเอง **ยังไม่ได้ประเมินว่าจะย้ายหรือทำสองที่**
 
 ### P02-T08 — กำหนด tolerance ของการ evaluate ซ้ำ
 
@@ -317,9 +328,9 @@ T11 (environment)  →  T01 (model)  →  T03 (เพดานข้อควา
 
 **สถานะรอบนี้:** **T04 `done`** — shared inference module พร้อม interface ที่ล็อกให้คนที่ 2 · **T05 `done`** — evaluate 14,640 แถวได้ **macro-F1 0.7606 / accuracy 0.8100** ยืนยันเลขด้วย scikit-learn และรันซ้ำจาก tree สะอาดได้เลขเดิมทุกหลัก · **T11 `done`** — uv + uv.lock + Python 3.13 เป็น convention ของทีม · รวม 27 tests ผ่านหมด · **T01 เสร็จ** — pin revision, ยืนยัน licence, อ่าน label mapping จาก config จริง, ยืนยันนิยาม `score` · **T02 เสร็จ** — pin dataset version 4, นิยาม evaluation set 14,640 แถว, ยืนยัน label ตรงกับ model · **T03 เสร็จ** — ล็อกเพดาน 510 content tokens และบันทึกกลับเข้า P01-T02 แล้ว **ปลด blocker ให้ P03** · หลักฐานทั้งสามอยู่ใน `reports/` · ยังไม่เขียนโค้ดใน `src/` (ตาม [P01-T03 §8](P01-T03-system-structure.md#8-หน้าที่ของเอกสารและการสร้างไฟล์) ที่ห้ามสร้างโฟลเดอร์เปล่ารอล่วงหน้า)
 
-**งานที่เหลือและ blocker:** T07–T10 ยังเป็น `planned` · T01–T06 และ T11 `done` · **ไม่มี blocker** · ผล evaluation ผูกกับ commit `40dcb77` ที่ tree สะอาด จึงใช้เป็น lineage ของ T07 และฐานเทียบของ T08 ได้แล้ว · T11 `in_progress` ปิดไม่ได้จนคนที่ 2 ยืนยัน convention · **ไม่มี blocker ที่หยุดงานฝั่งเราอยู่** · T10 รอมติทีมแต่บล็อกแค่คนที่ 2 ตอนนำ model เข้า container
+**งานที่เหลือและ blocker:** T08–T10 ยังเป็น `planned` · T01–T07 และ T11 `done` · **ไม่มี blocker** · ผล evaluation ผูกกับ commit `40dcb77` ที่ tree สะอาด จึงใช้เป็น lineage ของ T07 และฐานเทียบของ T08 ได้แล้ว · T11 `in_progress` ปิดไม่ได้จนคนที่ 2 ยืนยัน convention · **ไม่มี blocker ที่หยุดงานฝั่งเราอยู่** · T10 รอมติทีมแต่บล็อกแค่คนที่ 2 ตอนนำ model เข้า container
 
-**Next action:** **T07** (lineage + `model_version`) ซึ่งอ้าง `artifact_id` จาก T06 ได้แล้ว → **T10** (ที่เก็บ artifact) → **T08** (tolerance) · **T09** (RAM/เวลาโหลด) เริ่มขนานได้ทุกเมื่อ: ส่ง `pyproject.toml` กับ `uv.lock` ให้คนที่ 2 ยืนยัน T11 และขอมติ T10 · **rotate Kaggle token** เพราะค่าเดิมอยู่ใน transcript แล้ว
+**Next action:** **T09** (RAM/เวลาโหลด) หรือ **T10** (ที่เก็บ artifact ซึ่งต้องใช้ข้อมูลขนาดจาก T06 และอาจใช้เวลาโหลดจาก T09) → ปิดด้วย **T08** (tolerance) ซึ่งต้องรันจาก fresh state และข้ามเครื่อง: ส่ง `pyproject.toml` กับ `uv.lock` ให้คนที่ 2 ยืนยัน T11 และขอมติ T10 · **rotate Kaggle token** เพราะค่าเดิมอยู่ใน transcript แล้ว
 
 ช่องว่างที่พบระหว่างอ่านเอกสาร P01 — **ยังไม่แก้ไฟล์ของคนอื่นในรอบนี้** ต้องคุยกันก่อน:
 

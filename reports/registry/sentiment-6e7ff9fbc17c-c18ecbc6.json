@@ -1,0 +1,57 @@
+{
+  "model_version": "sentiment-6e7ff9fbc17c-c18ecbc6",
+  "lineage": {
+    "artifact": {
+      "artifact_id": "sentiment-6e7ff9fbc17c",
+      "manifest_sha256": "8b8dfb302ac6c0efdd9d528d55c657a6b6cc408da8b17d8ac3cee00b30384bdc",
+      "loadable_dir": "model",
+      "files_sha256": {
+        "model/config.json": "d2fba19997da698157196ba16f5fcb30a97a7551cef6845a0f3d743ee19c6129",
+        "model/merges.txt": "1ce1664773c50f3e0cc8842619a93edc4624525b728b188a9e0be33b7726adc5",
+        "model/model.safetensors": "deece7c9f6d59c96ac2a9ef285a6b0f20f9bea463b90242a0578bdfae8010718",
+        "model/special_tokens_map.json": "378eb3bf733eb16e65792d7e3fda5b8a4631387ca04d2015199c4d4f22ae554d",
+        "model/vocab.json": "06b4d46c8e752d410213d9548eb27a54db70fda0319b6271fb8d59dead5e1cab",
+        "upstream-model-card.md": "05ad85143ed60f0abe631ab935485db046c24710d9bec50829b017cfc1e12bf7"
+      }
+    },
+    "source_model": {
+      "repo": "cardiffnlp/twitter-roberta-base-sentiment-latest",
+      "revision": "3216a57f2a0d9c45a2e6c20157c20c49fb4bf9c7",
+      "licence": "CC BY 4.0",
+      "upstream_file_sha256": {
+        "config.json": "d2fba19997da698157196ba16f5fcb30a97a7551cef6845a0f3d743ee19c6129",
+        "vocab.json": "06b4d46c8e752d410213d9548eb27a54db70fda0319b6271fb8d59dead5e1cab",
+        "merges.txt": "1ce1664773c50f3e0cc8842619a93edc4624525b728b188a9e0be33b7726adc5",
+        "special_tokens_map.json": "378eb3bf733eb16e65792d7e3fda5b8a4631387ca04d2015199c4d4f22ae554d",
+        "pytorch_model.bin": "4d24a3e32a88ed1c4e5b789fc6644e2e767500554e954b27dccf52a8e762cbae",
+        "README.md": "05ad85143ed60f0abe631ab935485db046c24710d9bec50829b017cfc1e12bf7"
+      }
+    },
+    "evaluation_data": {
+      "handle": "crowdflower/twitter-airline-sentiment/versions/4",
+      "sha256": "ea94b23f41892b290dec3330bb8cf9cb6b8bc669eaae5f3a84c40f7b0de8f15e",
+      "rows": 14640
+    },
+    "code": {
+      "commit": "ad382f10ad48ad8536431756c4c14212c748fe25"
+    },
+    "environment": {
+      "python": "3.13.11",
+      "lockfile_sha256": "897a91df2d1fbc88d6a5fcb2fd4dc37c4affdd40be55b7ea293d88385797bb96",
+      "packages": {
+        "python": "3.13.11",
+        "torch": "2.14.1",
+        "transformers": "5.19.0",
+        "numpy": "2.5.3",
+        "tokenizers": "0.23.2"
+      }
+    },
+    "evaluation": {
+      "result_file": "reports/P02-T05-evaluation-result.json",
+      "result_sha256": "2cf6ba170395230e0df45d383f28fd458e1aebd88f0306638a9cc4e008675714",
+      "run_finished_utc": "2026-10-07T11:41:04+00:00",
+      "accuracy": 0.8100409836065574,
+      "macro_f1": 0.7605863552090412
+    }
+  }
+}
