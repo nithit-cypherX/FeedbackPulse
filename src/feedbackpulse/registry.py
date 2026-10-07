@@ -9,6 +9,7 @@ Run with:  PYTHONPATH=src uv run python -m feedbackpulse.registry
 
 import hashlib
 import json
+import shutil
 from pathlib import Path
 
 from feedbackpulse import dataset, gitinfo, model_files
@@ -126,7 +127,13 @@ def build_lineage(artifact_dir: Path) -> dict:
             "packages": evaluation["inputs"]["versions"],
         },
         "evaluation": {
-            "result_file": str(EVALUATION_RESULT),
+            # Relative to the entry, because the shared path is overwritten by
+            # the next run. An entry that pointed at that path stopped being
+            # traceable the moment anyone re-ran the evaluation, which would
+            # leave a rolled-back version with lineage nobody can check.
+            # Replaced with the real filename in register().
+            "result_file": None,
+            "produced_from": str(EVALUATION_RESULT),
             "result_sha256": _sha256_file(EVALUATION_RESULT),
             "run_finished_utc": evaluation["run"]["finished_utc"],
             "accuracy": evaluation["accuracy"],
@@ -141,6 +148,13 @@ def register(artifact_dir: Path, registry_dir: Path = REGISTRY_DIR) -> Path:
     version = model_version_for(lineage["artifact"]["artifact_id"], lineage)
 
     registry_dir.mkdir(parents=True, exist_ok=True)
+
+    # The entry keeps its own copy of the evaluation it was built from, so it
+    # stays verifiable after the next run overwrites the shared result file.
+    snapshot = registry_dir / f"{version}-evaluation.json"
+    shutil.copyfile(EVALUATION_RESULT, snapshot)
+    lineage["evaluation"]["result_file"] = snapshot.name
+
     entry = {"model_version": version, "lineage": lineage}
     path = registry_dir / f"{version}.json"
     path.write_text(json.dumps(entry, indent=2) + "\n", encoding="utf-8")
