@@ -2,11 +2,13 @@
 
 - แผนหลัก: [Overview plan](../../overview-plan.md) · ขอบเขตโครงการ: [Proposal](../../PROPOSAL.md)
 - ข้อตกลงที่ต้องทำตาม: [P01-T02 API contract](P01-T02-api-contract.md) · [P01-T03 System structure](P01-T03-system-structure.md)
-- สถานะ P02: `planned`
+- สถานะ P02: `in_progress` — T01–T05 และ T11 `done` · T06–T10 `planned`
 - เจ้าของ: คนที่ 1 — Model และ evaluation (ตาม [overview](../../overview-plan.md))
 - อัปเดต: 2026-10-07
 
-ไฟล์นี้เป็น **แผนของ phase P02** ยังไม่ใช่หลักฐานว่าทำอะไรเสร็จแล้ว ทุก task ด้านล่างสถานะ `planned` และช่อง "ผลจริง" ระบุว่า *ยังไม่รัน* ทั้งหมด การเขียนแผนเสร็จไม่ได้แปลว่าเริ่ม implement แล้ว
+**การเปลี่ยนอำนาจตัดสินใจ (ผู้ใช้สั่งเมื่อ 2026-10-07):** เรื่องที่แผนเดิมเขียนว่า *รอมติทีม* หรือ *รอคนที่ 2 ยืนยัน* เปลี่ยนเป็น **คนที่ 1 ตัดสินเอง แล้วคนที่ 2 รับไปทำต่อโดยอิงการตัดสินนี้** · กระทบ T04, T10 และ T11 · บันทึกไว้เพื่อให้เห็นว่าเป็นการเปลี่ยนขอบเขตที่ได้รับอนุญาต ไม่ใช่การลดเกณฑ์เพื่อปิด task · **เกณฑ์ทางเทคนิคอื่นไม่เปลี่ยน** — task ที่ยังตรวจไม่ได้ก็ยังปิดไม่ได้
+
+ไฟล์นี้เป็น **แผนของ phase P02** พร้อมบันทึกความคืบหน้าจริง · **เสร็จแล้ว 6 task:** [T01](../../reports/P02-T01-model-provenance.md), [T02](../../reports/P02-T02-evaluation-dataset.md), [T03](../../reports/P02-T03-text-length-cap.md), [T04](../../reports/P02-T04-inference-interface.md), [T05](../../reports/P02-T05-evaluation.md) และ T11 · T06–T10 ยังเป็น `planned` และช่อง "ผลจริง" ยังเป็น *ยังไม่รัน*
 
 ---
 
@@ -43,7 +45,7 @@
 
 ## 2. Tasks และ verification
 
-ทุก task สถานะ `planned` · ช่อง "ผลจริง" = ยังไม่รัน · ค่าที่ต้องวัด (metric, เพดานความยาวข้อความ, tolerance, RAM, เวลาโหลด) เขียนไว้เป็นสิ่งที่ต้องวัดแล้วบันทึก **ไม่ใส่ตัวเลขคาดเดาล่วงหน้า**
+T06–T10 สถานะ `planned` ช่อง "ผลจริง" = ยังไม่รัน · **T01–T05 และ T11 `done`** มีผลจริงบันทึกไว้ · ค่าที่ต้องวัด (metric, เพดานความยาวข้อความ, tolerance, RAM, เวลาโหลด) เขียนไว้เป็นสิ่งที่ต้องวัดแล้วบันทึก **ไม่ใส่ตัวเลขคาดเดาล่วงหน้า**
 
 **ลำดับการทำงาน ไม่ใช่เรียงตามหมายเลข** — ID คงที่ตามที่ตั้งไว้ แต่ลำดับจริงคือ:
 
@@ -58,7 +60,7 @@ T11 (environment)  →  T01 (model)  →  T03 (เพดานข้อควา
 
 ### P02-T01 — ดึง model และ pin revision พร้อมบันทึก provenance
 
-- **สถานะ:** `planned`
+- **สถานะ:** `done` — ครบทั้ง 4 ข้อใน "Done when" และผ่าน "Check" แล้ว
 - **งาน:** ดึง model จากลิงก์ HF ใน Proposal §2 แล้วบันทึกข้อมูลระบุรุ่นลง Git (ตัวไฟล์ไม่เข้า Git ตาม [P01-T03 §7](P01-T03-system-structure.md#7-อะไรเข้า-git-และอะไรไม่เข้า))
 - **Done when:**
   - บันทึก **commit SHA ของ revision ที่ใช้** ไม่ใช่แค่ tag `latest` — tag ขยับได้ ทำให้รันซ้ำไม่ได้จริง
@@ -66,12 +68,22 @@ T11 (environment)  →  T01 (model)  →  T03 (เพดานข้อควา
   - **อ่าน label mapping จาก `config.json` ที่ดึงมาจริง** (`id2label`) แล้วบันทึกว่า index ไหนตรงกับ `negative`, `neutral`, `positive` ตาม 3 กลุ่มใน [P01-T02 §3](P01-T02-api-contract.md#3-request-และ-response) — ไม่เดาจากชื่อ
   - บันทึกว่า `score` ที่จะคืนคืออะไร (เช่น ค่าของ class ที่เลือกหลัง softmax) ให้ตรงกับนิยาม "คะแนนของกลุ่มที่เลือก อยู่ระหว่าง 0–1" ใน P01-T02 §3
 - **Check:** ดึง revision เดิมซ้ำจาก SHA ที่บันทึกแล้วได้ไฟล์ชุดเดียวกัน · เทียบ mapping ที่บันทึกกับ `config.json`
-- **ผลจริง:** ยังไม่รัน
+- **ผลจริง (รัน 2026-10-07):** หลักฐานเต็มใน [reports/P02-T01-model-provenance.md](../../reports/P02-T01-model-provenance.md)
+  - **Observed:** pin revision `3216a57f2a0d9c45a2e6c20157c20c49fb4bf9c7` (commit SHA ไม่ใช่ tag `latest`) · บันทึก sha256 ของทั้ง 6 ไฟล์ที่ดึงมา
+  - **Observed:** ดึงซ้ำจาก SHA เดิมลง cache directory แยก แล้วเทียบ sha256 ทั้ง 6 ไฟล์ → **ตรงกันทุก byte** (ไม่ได้อาศัย cache เดิม) · cache ชั่วคราวลบแล้ว
+  - **Observed:** licence บน Hub card metadata = `cc-by-4.0` **ตรงกับที่ Proposal §2 อ้าง**
+  - **Observed:** `config.json` ระบุ `id2label` = `{0: negative, 1: neutral, 2: positive}` ตรงกับ 3 กลุ่มใน P01-T02 §3 — **ไม่ใช่ `LABEL_0/1/2`** จึงไม่ต้องสร้างตาราง map เพิ่ม
+  - **Observed:** `score` = `softmax(logits)` ของ class ที่ `argmax` · ผลรวมทุก class = `1.000000` จึงอยู่ในช่วง 0–1 ตาม P01-T02 §3
+  - **Decision:** ข้าม `tf_model.h5` (TensorFlow weights ไม่ใช้) ประหยัดการดาวน์โหลดราว 500 MB · ผลข้างเคียง: ใช้ offline ต้องส่ง `allow_patterns` ชุดเดิม
+  - **Decision:** ยังไม่เขียน script ใน `src/` รอบนี้ — T04 เป็นเจ้าของ path การโหลด model ที่ evaluation และ API ใช้ร่วมกัน การเขียน loader แยกตอนนี้จะสร้างตรรกะโหลด model สองชุดซึ่ง P01-T03 §4 ห้ามไว้ · วิธีรันซ้ำบันทึกเป็นคำสั่งในรายงานแล้ว
+  - **ไฟล์ model ไม่เข้า repo** — อยู่ใน HF cache ของเครื่อง จึงยังไม่ต้องแก้ `.gitignore` รอบนี้ (การจัดลง `artifacts/` เป็นงาน T06)
 - **ขึ้นกับ:** **T11** (ต้องมี environment ที่ติดตั้ง dependency แล้วจึงรันได้) · ลิงก์ใน Proposal §2
+- **ส่งต่อให้ T03:** repo นี้ **ไม่มี `tokenizer_config.json`** ทำให้ `tokenizer.model_max_length` คืนค่า sentinel `1e30` ซึ่งไม่ใช่เพดานจริง · ค่าที่เป็นหลักฐานคือ `max_position_embeddings = 514` ใน `config.json` → **T03 ต้องยืนยันเพดานจาก config + การทดลองกับ tokenizer จริง ห้ามอ่านจาก `model_max_length`**
+- **ส่งต่อให้ T06:** repo นี้มีแต่ `pytorch_model.bin` (pickle) **ไม่มี `model.safetensors`** → T06 ต้องตัดสินว่าจะแปลงเป็น safetensors ตอน package หรือไม่
 
 ### P02-T02 — จัด evaluation dataset ให้มี version
 
-- **สถานะ:** `planned`
+- **สถานะ:** `done` — ครบทุกข้อใน "Done when" และผ่าน "Check" ทั้งสองข้อแล้ว
 - **งาน:** ดึง Twitter US Airline Sentiment **version 4** จากลิงก์ Kaggle ใน Proposal §2 ลงที่ `data/` ตามโครงสร้างใน [P01-T03 §6](P01-T03-system-structure.md#6-ตำแหน่ง-code-data-model-และ-configuration) แล้วกำหนด evaluation set ที่คงที่
 - **Done when:**
   - บันทึก**วิธีได้มา**ของสิทธิ์/credential ที่ต้องใช้ ไม่ใช่ค่า token จริง ให้เพื่อนทำตามได้ ตามจุดตรวจ Reproduction ใน [P01-T03 §10](P01-T03-system-structure.md#10-จุดตรวจที่ต้องไม่หลุดระหว่างทำงาน)
@@ -82,37 +94,73 @@ T11 (environment)  →  T01 (model)  →  T03 (เพดานข้อควา
   - ตัวไฟล์ dataset **ไม่เข้า Git** ตาม P01-T03 §7
   - ชุดนี้คือ **versioned test set** เดียวกับที่ [Proposal §3](../../PROPOSAL.md#3-serving-pattern-and-requirements) อ้างถึงตอนวัดเป้า p95 — P03–P04 ใช้ชุดนี้ ไม่สร้างชุดใหม่
 - **Check:** ทำตามวิธีที่บันทึกจากเครื่องเปล่าแล้วได้ไฟล์ที่ hash ตรงกัน · ตรวจ Git history ว่าไม่มี Kaggle token หลุดเข้าไปก่อน push ตามจุดตรวจ Secrets ใน [P01-T03 §10](P01-T03-system-structure.md#10-จุดตรวจที่ต้องไม่หลุดระหว่างทำงาน) ที่ระบุว่ามี `.gitignore` แล้วไม่ถือว่าปลอดภัยครบ
-- **ผลจริง:** ยังไม่รัน
-- **ขึ้นกับ:** **T11** (ต้องมี environment ที่ติดตั้ง dependency แล้วจึงรันได้) · ลิงก์ใน Proposal §2
+- **ผลจริง (รัน 2026-10-07):** หลักฐานเต็มใน [reports/P02-T02-evaluation-dataset.md](../../reports/P02-T02-evaluation-dataset.md)
+  - **Decision:** ใช้ `kagglehub` ไม่ใช่ `kaggle` CLI · **Source:** `kagglehub` parse handle `.../versions/4` ได้ `version=4, is_versioned=True` ขณะที่ `kaggle datasets download` ไม่มี flag เลือก version (ตรวจ argparse แล้ว) → ตัวเดียวที่ pin **version 4** ตาม Proposal §2 ได้
+  - **Observed:** `data/Tweets.csv` 3,421,431 bytes · sha256 `ea94b23f41892b290dec3330bb8cf9cb6b8bc669eaae5f3a84c40f7b0de8f15e` · **14,640 แถว** 15 columns
+  - **Observed:** `airline_sentiment` มี 3 ค่าคือ `negative` 9,178 / `neutral` 3,099 / `positive` 2,363 — **ชื่อตรงตัวกับ `id2label` ของ model ทั้ง 3 กลุ่ม ไม่ต้องสร้างตารางแปลง**
+  - **Observed:** ไม่มีแถว `text` ว่าง ไม่มีแถวไม่มี label ไม่มี label นอก 3 กลุ่ม → การตัดสินใจ "ใช้ทุกแถว ไม่กรอง" ที่วางไว้ล่วงหน้าใช้ได้จริง
+  - **Decision:** evaluation set = **ทุกแถวในไฟล์ ไม่ sample ไม่ split ไม่กรองด้วย `airline_sentiment_confidence`** → **ไม่มี random seed ที่เกี่ยวข้องกับการเลือกแถว** เพราะไม่ได้สุ่ม · ถ้า T05/T08 ต้องสุ่มลำดับหรือ batch ต้องบันทึก seed ของขั้นตอนนั้นแยก
+  - **Observed (Check 1):** ดึงซ้ำลง `KAGGLEHUB_CACHE` แยก แล้วเทียบ sha256 → **ตรงกันทุก byte** · cache ชั่วคราวลบแล้ว
+  - **Observed (Check 2):** ค้น `KGAT_…`, `KAGGLE_KEY=`, `KAGGLE_API_TOKEN=` ใน **ทุก commit ของ Git history** และในไฟล์ที่จะ commit → **ไม่พบ** · `git check-ignore` ยืนยัน `data/Tweets.csv` ถูกกันด้วย `.gitignore:31`
+  - **Observed:** เพิ่ม `kagglehub>=1.0.2` ใน dependency group `data` **ไม่ใส่ใน `[project.dependencies]`** เพื่อให้ image ของ P03–P04 ไม่ติด Kaggle client ที่ไม่ได้เรียกตอน inference · ยืนยันด้วย `uv sync --no-default-groups --dry-run`
+  - **Observed:** เพิ่ม `data/` และ `artifacts/` ใน `.gitignore` (ปิดช่องว่างที่บันทึกไว้ใน §5 ข้อ 4)
+- **ขึ้นกับ:** **T11** (environment) · ลิงก์ใน Proposal §2 · Kaggle credential ของเจ้าของงาน (ได้รับแล้ว 2026-10-07)
+- **ส่งต่อให้ T05:** **class imbalance** `negative` 62.7% เทียบ `positive` 16.1% → **accuracy เพียงตัวเดียวทำให้เข้าใจผิด** เพราะเดา `negative` ทั้งหมดได้ 62.7% แล้ว · ควรใช้ macro-F1 และรายงาน per-class ประกอบ · **คุณภาพ label:** 4,195 แถว (28.7%) มี `airline_sentiment_confidence` < 1.0 และ 3,872 แถว (26.4%) < 0.7 → metric ที่วัดได้คือความตรงกับ label ชุดนี้ ไม่ใช่เพดานความสามารถของ model ต้องเขียนกำกับผลทุกครั้ง
+- **ส่งต่อให้ T03:** `text` ยาวสุด **186 อักขระ** สั้นกว่าเพดาน 512 token มาก → **dataset นี้จะไม่แตะเพดานเลย** T03 ต้องยืนยันเพดานด้วยข้อความที่สร้างขึ้นเอง และ boundary case ของ API ใน P03 ก็ทดสอบจาก dataset นี้ไม่ได้
+- **ข้อจำกัด licence:** CC BY-NC-SA 4.0 เป็น non-commercial + ShareAlike · ยังไม่ประเมินว่าการยกตัวอย่างข้อความจริงลงรายงานติดเงื่อนไข ShareAlike แค่ไหน จึงยังไม่ยกตัวอย่างข้อความใดใน `reports/` · ถ้า T05 ต้องยก ต้องตัดสินเรื่องนี้ก่อน
 
 ### P02-T03 — ยืนยันเพดานความยาวข้อความ (ปลด blocker ของ P03)
 
-- **สถานะ:** `planned`
+- **สถานะ:** `done` — บันทึกครบ 3 อย่างใน P01-T02 §7 และผ่าน Check แล้ว
 - **งาน:** ตรวจ tokenizer ของ revision ที่ pin ใน T01 แล้วบันทึกผลกลับไปที่ [P01-T02 §7](P01-T02-api-contract.md#7-จุดที่ยังต้องยืนยันและการส่งต่องาน) ตามที่ §7 สั่งไว้
 - **Done when:** บันทึกใน P01-T02 ครบ 3 อย่าง — **ค่าที่รองรับ**, **วิธีนับ** (อักขระหรือ token) และ **การรวม special tokens** · ยืนยันพฤติกรรมที่ตกลงแล้วว่า ยาวเกินแล้ว **ปฏิเสธ ไม่ตัดเงียบ ๆ**
 - **Check:** ส่งข้อความความยาวที่เพดานและเกินเพดานเข้า tokenizer จริง แล้วเทียบกับค่าที่บันทึก (การตรวจ boundary ผ่าน API เป็นงาน P03)
-- **ผลจริง:** ยังไม่รัน
+- **ข้อมูลจาก T01 ที่ต้องใช้:** `tokenizer.model_max_length` **ใช้ไม่ได้** เพราะ repo ไม่มี `tokenizer_config.json` (คืนค่า sentinel `1e30`) · ให้ยึด `max_position_embeddings = 514` ใน `config.json` แล้วทดลองหาเพดาน token จริงรวม special tokens — ดู [reports/P02-T01-model-provenance.md](../../reports/P02-T01-model-provenance.md) §5
+- **ข้อมูลจาก T02 ที่ต้องใช้:** ข้อความใน dataset ยาวสุด 186 อักขระ **ไม่แตะเพดาน** → ต้องสร้างข้อความทดสอบเองเพื่อหาเพดาน ไม่ใช้ dataset
+- **ผลจริง (รัน 2026-10-07):** หลักฐานเต็มใน [reports/P02-T03-text-length-cap.md](../../reports/P02-T03-text-length-cap.md)
+  - **ค่าที่ล็อก:** เนื้อหา **510 tokens** · special tokens **2** (`<s>` + `</s>`) · ความยาวรวม **512 tokens** · **นับ token ไม่ใช่อักขระ**
+  - **Observed:** ทดลอง forward ที่ความยาวรวม 510/511/512 ผ่าน · 513 และ 514 พังด้วย `RuntimeError: index 514 is out of bounds for dimension 1 with size 514`
+  - **Observed:** ยืนยันซ้ำด้วยข้อความจริงผ่าน tokenizer — 1,527 อักขระ = 512 tokens ผ่าน · 1,530 อักขระ = 513 tokens พัง
+  - **Observed:** `tok(text)` **ไม่ตัดให้** คืนความยาวจริง 513 · `tok(text, truncation=True, max_length=512)` **ตัดจริง** → โค้ดของเราต้องไม่ใช้ `truncation=True` เพราะขัดกับ P01-T02 §3
+  - **Observed:** อัตราอักขระต่อ token ไม่คงที่ 0.52 (ภาษาไทย) ถึง 3.98 (ตัวอักษรเดียวติดกัน) → **เพดานแบบนับอักขระใช้แทนไม่ได้**
+  - **Observed:** บันทึกค่ากลับเข้า [P01-T02](P01-T02-api-contract.md) แล้วใน §1, §3, §6 และ §7 **ในไฟล์เดิม** ไม่สร้างสำเนา
 - **ขึ้นกับ:** T01
-- **หมายเหตุ:** แก้ P01-T02 §7 **ในไฟล์เดิม** ไม่สร้างสำเนาข้อตกลงชุดใหม่ ([P01-T02 §1](P01-T02-api-contract.md#1-สถานะและขอบเขต))
+- **ส่งต่อให้ P03:** ต้อง **นับ token แล้วปฏิเสธก่อนเรียก model** — ถ้าปล่อยถึง model จะได้ `RuntimeError` ซึ่งกลายเป็น `500` ไม่ใช่ `422` ตาม P01-T02 §4 · เพิ่มเข้า checklist §6 ของ P01-T02 แล้ว
 
 ### P02-T04 — Shared inference module
 
-- **สถานะ:** `planned`
+- **สถานะ:** `done` — ครบทุกข้อใน "Done when" และ Check ข้อ "evaluation path กับ API path เรียกฟังก์ชันเดียวกัน" ปิดได้แล้วด้วย T05 (ฝั่ง API ตรวจซ้ำอีกครั้งใน P03)
 - **งาน:** เขียน module เดียวใน `src/` ที่ทำ preprocess → predict → แปลงผลเป็น sentiment + score ให้ **ทั้ง evaluation และ API เรียกใช้ร่วมกัน** ตาม [P01-T03 §4](P01-T03-system-structure.md#4-อยู่ใน-container-เดียวกัน-แต่แยกหน้าที่ของโค้ด) ที่กำหนดว่า "ตอนประเมินทำแบบหนึ่ง ตอนใช้งานจริงทำอีกแบบ" ไม่ได้
 - **Done when:**
   - มีจุดเรียกเดียวที่ evaluation script และ API ใช้ร่วม — ไม่มี preprocessing สองชุด
   - คืนค่า `sentiment` ใน 3 กลุ่ม และ `score` อยู่ระหว่าง 0–1 ตาม P01-T02 §3
   - โหลด model **ครั้งเดียวเมื่อ process เริ่ม** แล้วใช้ซ้ำหลาย request ตาม [P01-T03 §3](P01-T03-system-structure.md#3-ส่วนให้บริการ--รับ-feedback-แล้วทำนาย)
   - มีพฤติกรรมชัดเจนเมื่อโหลด model ไม่สำเร็จ (ยกข้อผิดพลาดที่แยกแยะได้) เพื่อให้ P03 ทำ `/ready` คืน `503` และ `/predict` ไม่คืน sentiment ปลอมได้
-  - **ตกลง interface กับคนที่ 2** ก่อนปิด task: ชื่อจุดเรียก, ชนิด input/output, ข้อผิดพลาดที่โยน
+  - ~~ตกลง interface กับคนที่ 2 ก่อนปิด task~~ → **แทนที่เมื่อ 2026-10-07: คนที่ 1 ล็อก interface เอง คนที่ 2 รับไปใช้** ดูค่าที่ล็อกในผลจริง
   - module ไม่อ่าน environment variable และไม่เรียก Azure เอง — ค่าของ environment รับเข้ามาจากภายนอก ตามการแยก core / configuration / cloud adapter ใน [P01-T03 §4](P01-T03-system-structure.md#4-อยู่ใน-container-เดียวกัน-แต่แยกหน้าที่ของโค้ด)
 - **Check:** unit test กรณีข้อความปกติ, ข้อความขอบเขต และกรณี model โหลดไม่สำเร็จ · ยืนยันว่า evaluation path กับ API path เรียกฟังก์ชันเดียวกันจริง · ต้องผ่าน `make portability-audit` ตามจุดตรวจ Portability ใน [P01-T03 §10](P01-T03-system-structure.md#10-จุดตรวจที่ต้องไม่หลุดระหว่างทำงาน) เมื่อคำสั่งนี้ถูกนิยามแล้ว (ยังไม่มีนิยาม ดู §5 ข้อ 3)
-- **ผลจริง:** ยังไม่รัน
+- **ผลจริง (รัน 2026-10-07):** interface ที่ล็อกให้คนที่ 2 ใช้อยู่ใน [reports/P02-T04-inference-interface.md](../../reports/P02-T04-inference-interface.md)
+  - **Observed:** สร้าง `src/feedbackpulse/inference.py` (core) และ `src/feedbackpulse/model_files.py` (configuration/prepare) แยกกันตาม P01-T03 §4 · core รับ `model_dir` และ `model_version` เข้ามา **ไม่ไปหาเอง**
+  - **Observed:** `ruff check` และ `ruff format --check` ผ่าน · **`pytest -q` ผ่าน 11 tests**
+  - **Observed:** ตรวจการแยก core ด้วย grep — ไม่มี `os.environ`, `getenv`, `requests`, `azure`, `boto` ใน `inference.py`
+  - **Observed:** **มี preprocessing และ predict ชุดเดียวจริง** — grep `AutoTokenizer`/`from_pretrained`/`softmax`/`argmax` ใน `src/` พบเฉพาะใน `inference.py`
+  - **Observed:** ไม่มี `truncation=True` ที่ใดใน `src/` · ข้อความ 511 tokens ได้ `TextTooLong` **ก่อน** ถึง forward pass จึงไม่กลายเป็น `500`
+  - **Decision:** `model_version` **รับจากภายนอกตอน `load()`** ไม่ตั้งค่าเอง เพื่อไม่ตัดสินแทน T07 ที่เป็นเจ้าของ scheme
+  - **Decision:** ชื่อกลุ่มอ่านจาก `config.json` ของ model ตอน runtime ไม่ hardcode ลำดับ index
+  - **Decision:** ยังไม่ทำ batch API — `predict()` รับข้อความเดียว ยังไม่มีผู้ใช้ที่ต้องการ batch · ถ้า T05 ช้าเกินรับได้ **ให้เพิ่ม batch ในโมดูลนี้** ไม่ใช่เขียน loop ที่ tokenize เองใน script ของ T05 เพราะจะเป็น preprocessing สองชุดที่ P01-T03 §4 ห้าม
+  - **Observed:** เพิ่ม `[tool.pytest.ini_options]` ใน `pyproject.toml` ตั้ง `pythonpath = ["src"]` เพราะ `src/` ไม่ได้ติดตั้งเป็น package
+  - **Observed (ปิด Check แล้ว 2026-10-07):** T05 เขียน `evaluate.py` ที่เรียก `SentimentClassifier.predict()` ทีละข้อความ · grep ยืนยันว่า `evaluate.py` ไม่มี `AutoTokenizer`/`from_pretrained`/`softmax`/`argmax` เลย → **evaluation ใช้เส้นทางเดียวกับที่ API จะใช้จริง** · ฝั่ง API ยังต้องตรวจซ้ำใน P03
+  - **ยังครบไม่ได้:** `make portability-audit` ยังไม่มีนิยามใน repo (§5 ข้อ 3)
+- **Decision ที่ล็อกแล้ว 3 เรื่อง (คนที่ 1 ตัดสิน 2026-10-07 · คนที่ 2 รับไปใช้ ไม่ต้องตกลงใหม่):**
+  1. **วิธี import: ใช้ `PYTHONPATH=/app/src` ไม่ build wheel** · เหตุผล: `pyproject.toml` ตั้ง `package = false` อยู่แล้วจึงไม่ต้องมี build backend · repo นี้มี service เดียวไม่ได้แจกจ่าย library · Docker ตั้ง env ตัวเดียวจบ · ถ้าภายหลังต้องแจกเป็น library ให้เปลี่ยนเป็น installable package แล้วแก้เฉพาะ `pyproject.toml` กับ `Dockerfile`
+  2. **map exception → HTTP status ล็อกตามตารางใน [รายงาน §2](../../reports/P02-T04-inference-interface.md)** — `ModelNotReady` → `503`, `InvalidText` และ `TextTooLong` → `422` · ตรงกับ [P01-T02 §4](P01-T02-api-contract.md#4-validation-และ-error-handling) อยู่แล้ว
+  3. **ไม่มี batch และไม่มี async** — `predict()` รับข้อความเดียว · API ตาม P01-T02 รับครั้งละหนึ่งข้อความจึงไม่มีผู้ใช้ batch · ถ้า T05 วัดแล้วช้าเกินรับได้ ให้เพิ่ม batch **ในโมดูลนี้** ไม่ใช่เขียน tokenize ซ้ำใน script ของ T05
+- **ส่งต่อให้ P03 เพิ่มเติม:** รันโค้ดนี้นอก pytest ต้องตั้ง `PYTHONPATH=src` เอง — `pythonpath` ใน `pyproject.toml` ครอบแค่ pytest ไม่ครอบ `python -m` (เจอตอน T05)
 - **ขึ้นกับ:** T01
 
 ### P02-T05 — Evaluation step และ metrics
 
-- **สถานะ:** `planned`
+- **สถานะ:** `done` — ครบทุกข้อใน "Done when" และผ่าน Check ทั้งสองข้อแล้ว
 - **งาน:** รัน evaluation บน dataset จาก T02 ผ่าน module จาก T04 แล้วออกรายงาน
 - **Done when:**
   - **เลือก metric และบันทึกเหตุผล** — P01 ยังไม่ได้กำหนดไว้ ต้องตัดสินใน P02 และต้องเลือกก่อนจึงจะกำหนด tolerance ใน T08 ได้
@@ -122,8 +170,19 @@ T11 (environment)  →  T01 (model)  →  T03 (เพดานข้อควา
   - ตรวจว่ารายงานไม่มี secret หรือข้อมูลอ่อนไหวก่อนเข้า Git (P01-T03 §7)
   - ถ้ายกตัวอย่างข้อความจาก dataset ในรายงาน ต้องสอดคล้องกับ [P01-T02 §5](P01-T02-api-contract.md#5-access-control-และข้อมูลที่ไม่เก็บ) ที่กำหนดว่าไม่บันทึก feedback เต็มข้อความ และกับ licence CC BY-NC-SA ของ dataset — ยกเท่าที่จำเป็นต่อการอธิบายผล
 - **Check:** เทียบตัวเลขในรายงานกับ output ของการรันจริง · ตรวจว่า metric คำนวณจาก label mapping ที่บันทึกใน T01/T02
-- **ผลจริง:** ยังไม่รัน
+- **ผลจริง (รัน 2026-10-07 10:27 UTC · 648.1 วินาที):** หลักฐานใน [reports/P02-T05-evaluation.md](../../reports/P02-T05-evaluation.md) · ผล machine-readable ใน [`P02-T05-evaluation-result.json`](../../reports/P02-T05-evaluation-result.json)
+  - **Decision:** **macro-F1 เป็น metric หลัก** ไม่ใช่ accuracy · เหตุผล: T02 พบว่า evaluation set เป็น `negative` 62.7% การตอบ `negative` ทุกข้อได้ accuracy 0.6271 แล้ว แต่ macro-F1 แค่ 0.2569 · มี test ที่พิสูจน์จุดนี้
+  - **Observed:** 14,640 แถว ข้ามไป 0 แถว · **accuracy 0.8100 · macro-F1 0.7606** · macro precision 0.7453 · macro recall 0.7825
+  - **Observed (per-class):** `negative` F1 0.8867 (n=9,178) · `neutral` F1 **0.6150** (n=3,099 — อ่อนที่สุด) · `positive` F1 0.7800 (n=2,363)
+  - **Observed (Check 1):** คำนวณใหม่จาก confusion matrix ด้วย `scikit-learn 1.9.1` และด้วย `trace/total` → **ตรงกันทุกตัวถึง 1e-12** ทั้ง accuracy, macro-F1 และ per-class · ผลรวม confusion matrix = 14,640 ตรงกับ `total`
+  - **Observed (Check 2):** ไฟล์ผลบันทึก `labels_from_model_config = ["negative","neutral","positive"]` อ่านจาก `config.json` ตอน runtime · `model_revision` และ `dataset_sha256` ในไฟล์ผล **ตรงกับ T01 และ T02 ทุกตัว**
+  - **Observed:** `scikit-learn` ใช้แบบ ephemeral (`uv run --with`) **ไม่เพิ่มเข้า lockfile** เพราะใช้ตรวจเท่านั้น
+  - **Observed:** ไม่มี secret และ **ไม่มีข้อความจาก dataset แม้แต่แถวเดียว** ในรายงานหรือไฟล์ผล → ปิดประเด็น licence CC BY-NC-SA ที่ T02 ทิ้งไว้
+  - **Decision:** ไม่เพิ่ม batch — วัดได้ราว 44 ms/ข้อความ รวม 648 วินาที ซึ่งรับได้สำหรับงานที่รันตอน release · ตัวเลขนี้**ไม่ใช่ latency ของ API**
+  - **ข้อจำกัดสำคัญ:** รันบน tree ที่ **ไม่สะอาด** (`commit 632e1c6e…`, `dirty: true`) → **ย้อนกลับไปหา code รุ่นที่ให้ผลนี้จาก commit อย่างเดียวไม่ได้** ต้อง commit แล้วรันซ้ำก่อนใช้เป็น lineage ของ T07 และฐานเทียบของ T08
+  - **ข้อจำกัด:** `model_version` ในไฟล์ผลเป็นค่าชั่วคราว `unversioned-3216a57f2a0d` เพราะ scheme เป็นงานของ T07
 - **ขึ้นกับ:** T02, T04
+- **ส่งต่อให้ T08:** ไฟล์ JSON ออกแบบให้เทียบสองรอบได้ตรง ๆ · รอบเทียบจะใช้เวลาใกล้เคียง 648 วินาที · **ยังไม่มีค่า tolerance** และยังไม่รู้ว่ารันซ้ำได้เลขเดียวกันทุกหลักหรือไม่ — T08 เป็นผู้ตอบ
 
 ### P02-T06 — Lock รูปแบบชุด artifact
 
@@ -170,26 +229,32 @@ T11 (environment)  →  T01 (model)  →  T03 (เพดานข้อควา
 - **ขึ้นกับ:** T04
 - **หมายเหตุ:** การทดสอบเป้า p95 ≤ 3 วินาที ที่ 2 concurrent requests เป็นงาน P03–P04 ไม่ใช่ T09 · ตัวเลขใน Proposal §3 เป็นเป้าหมาย ยังไม่ใช่ผลวัด
 
-### P02-T10 — เสนอตัวเลือกที่เก็บ model artifact ให้ทีมตัดสิน
+### P02-T10 — ตัดสินที่เก็บ model artifact
 
 - **สถานะ:** `planned`
-- **งาน:** [P01-T03 §12](P01-T03-system-structure.md#12-สิ่งที่ยังไม่-lock-และงานคุยถัดไป) และ [§7](P01-T03-system-structure.md#7-อะไรเข้า-git-และอะไรไม่เข้า) มอบการตัดสิน "บริการหรือรูปแบบเก็บ model artifact ที่ทีมจะใช้ร่วมกัน" ให้ P02 แต่เพราะเป็น **ของที่ทีมใช้ร่วมกัน** และกระทบ architecture กับงบ จึงเสนอให้ทีมตัดสิน ไม่ตัดสินคนเดียว
+- **งาน:** [P01-T03 §12](P01-T03-system-structure.md#12-สิ่งที่ยังไม่-lock-และงานคุยถัดไป) และ [§7](P01-T03-system-structure.md#7-อะไรเข้า-git-และอะไรไม่เข้า) มอบการตัดสิน "บริการหรือรูปแบบเก็บ model artifact ที่ทีมจะใช้ร่วมกัน" ให้ P02 · **คนที่ 1 ตัดสินเองตามอำนาจที่ได้รับเมื่อ 2026-10-07** แล้วบันทึกเหตุผลและ trade-off ให้คนที่ 2 รับไปทำต่อ
 - **Done when:**
-  - เสนออย่างน้อย 2 ทางเลือกพร้อม trade-off ด้าน **cold start, งบ USD 15 ต่อ 30 วัน (Proposal §6), ความง่ายในการ rollback (R2) และผลต่อการสาธิตเหตุขัดข้องของคนที่ 3 (R4)**
-  - ทีมเลือกและบันทึกผลกลับเข้า P01-T03 §12 ในไฟล์เดิม
+  - เทียบอย่างน้อย 2 ทางเลือกด้าน **cold start, งบ USD 15 ต่อ 30 วัน (Proposal §6), ความง่ายในการ rollback (R2) และผลต่อการสาธิตเหตุขัดข้องของคนที่ 3 (R4)**
+  - ~~ทีมเลือก~~ → **คนที่ 1 เลือกและบันทึกเหตุผลลง `reports/` พร้อมอัปเดต P01-T03 §12** แล้วแจ้งคนที่ 2 และคนที่ 3
   - **ต้องปิดก่อนคนที่ 2 เริ่มงานที่ต้องนำ model เข้า container ใน P03**
-- **Check:** มีมติที่บันทึกแล้ว และทางเลือกที่เลือกรองรับชุด artifact จาก T06 ได้
-- **ผลจริง:** ยังไม่รัน — **pending decision**
+- **Check:** มีการตัดสินที่บันทึกแล้ว และทางเลือกที่เลือกรองรับชุด artifact จาก T06 ได้
+- **ผลจริง:** ยังไม่รัน
 - **ขึ้นกับ:** T06
 
 ### P02-T11 — ตั้ง convention: Python version, dependency manager, lockfile
 
-- **สถานะ:** `planned`
+- **สถานะ:** `done` — ตั้งใช้งานได้ ตรวจแล้ว และล็อกเป็น convention ของทีมโดยคนที่ 1
 - **งาน:** repo ยังไม่มี `requirements.txt` หรือ `pyproject.toml` ขณะที่ `.gitignore` ชี้ว่าจะใช้ Python + pytest + ruff · `.agents/AGENTS.template.md` สั่งให้ "ใช้ package manager และ lockfile convention ของ repo" ซึ่งยังไม่มี จึงต้องตั้งในรอบนี้
-- **Done when:** ตกลง Python version, dependency manager และ lockfile **ร่วมกับคนที่ 2** เพราะ P03–P04 ใช้ชุดเดียวกัน · ล็อกเวอร์ชัน dependency ที่กระทบผล inference
-- **ถ้าคนที่ 2 ยังตอบไม่ได้:** ตั้ง environment พร้อม lockfile ใช้งานก่อนเพื่อไม่ให้ T01 และ T02 ค้าง แล้วนำค่าที่ใช้จริงไปขอมติให้เป็น convention ร่วมทีมภายหลัง · **ไม่ถือว่า T11 เสร็จจนกว่าทีมจะยืนยัน** เพราะ P03–P04 ต้องใช้ชุดเดียวกัน
+- **Done when:** ~~ตกลงร่วมกับคนที่ 2~~ → **แทนที่เมื่อ 2026-10-07: คนที่ 1 ล็อก convention เอง คนที่ 2 ใช้ชุดเดียวกันใน P03–P04** · ล็อกเวอร์ชัน dependency ที่กระทบผล inference
 - **Check:** ติดตั้งจาก lockfile บนเครื่องเปล่าแล้วรัน pipeline ได้
-- **ผลจริง:** ยังไม่รัน
+- **ผลจริง (รัน 2026-10-07 บน macOS 15.5 arm64):**
+  - **Decision (ล็อกแล้ว):** `uv` + `uv.lock` + Python `3.13` — ผู้ใช้เลือกเมื่อ 2026-10-07 · **เป็น convention ของทีม คนที่ 2 ใช้ชุดนี้ใน P03–P04** · runtime ที่ใส่ container ใช้ `uv sync --no-default-groups` (ไม่รวม group `dev` และ `data`)
+  - **Source:** `uv pip compile` ยืนยันว่า `torch==2.14.1`, `transformers==5.19.0`, `numpy==2.5.3` resolve ได้เหมือนกันทั้ง Python 3.12 และ 3.13 → ML stack ไม่บังคับเวอร์ชัน จึงเลือก 3.13 ที่มีในเครื่องแล้ว
+  - **Observed:** สร้าง `pyproject.toml`, `.python-version`, `uv.lock` (59 packages) · ลบ `.venv` แล้ว `uv sync --frozen` ติดตั้งกลับได้จาก lockfile เพียงอย่างเดียว
+  - **Observed:** เวอร์ชันที่ติดตั้งจริงตรงกับที่ pin — `torch 2.14.1`, `transformers 5.19.0`, `numpy 2.5.3`, `tokenizers 0.23.2`, Python `3.13.11` · dev tools `ruff 0.16.10`, `pytest 9.1.1`
+  - **Observed (ปิด Check แล้ว):** หลัง T04 มีโค้ดจริง `uv run pytest -q` ผ่าน 11 tests จาก environment ที่ติดตั้งด้วย `uv sync --frozen` → ยืนยันว่าติดตั้งจาก lockfile แล้วรันโค้ดของโครงการได้ · การรัน pipeline ครบวงจรยังรอ T05
+  - **ข้อจำกัดที่รู้แล้ว:** pin ถึงระดับ Python **minor** (`3.13`) ไม่ใช่ patch · เครื่องนี้ใช้ `3.13.11` (Anaconda build) เครื่องอื่นอาจได้ patch อื่น → ต้องบันทึก patch ที่ใช้จริงลงรายงานตาม T05 และ T08
+  - **ยังไม่เพิ่ม dependency ของ task ถัดไป** — Kaggle client (T02) และ metric library (T05) จะเพิ่มเมื่อถึง task นั้น ตามกติกา "add only the dependency required for the current feature" ใน `.agents/AGENTS.template.md`
 - **ขึ้นกับ:** ไม่ขึ้นกับ task อื่น แต่ **ต้องทำก่อน T01 และ T02** — เป็น task แรกของ phase นี้
 - **หมายเหตุ:** *ไม่มีเอกสารใดมอบ task นี้ให้ P02 โดยตรง* — เป็นการตีความของผู้เขียนแผนว่าต้องมีก่อนจึงจะรัน task อื่นซ้ำได้ และเป็นกลไกที่ใช้ version environment ตาม Proposal §4
 
@@ -204,8 +269,8 @@ T11 (environment)  →  T01 (model)  →  T03 (เพดานข้อควา
 | เพดานความยาวข้อความ | **P02 วัดแล้วบันทึกกลับ P01-T02 §7** (T03) | คนที่ 1 |
 | Tolerance การ evaluate ซ้ำ | **P02 วัดแล้วกำหนด** (T08) | คนที่ 1 |
 | Metric ที่ใช้ตัดสิน | **P02 เลือกและบันทึกเหตุผล** (T05) | คนที่ 1 |
-| บริการเก็บ artifact | **pending — ขอมติทีม** (T10) | ทีม |
-| Python/dependency convention | **pending — ตกลงกับคนที่ 2** (T11) | คนที่ 1 + คนที่ 2 |
+| บริการเก็บ artifact | **pending — คนที่ 1 ตัดสิน** (T10) | คนที่ 1 |
+| Python/dependency convention | **ล็อกแล้ว** — uv + uv.lock + Python 3.13 (T11) | คนที่ 1 |
 | วิธีนำ model เข้า container | **P02 ป้อนข้อมูลให้ คนที่ 2 ตัดสิน** — P01-T03 §12 ไม่ได้มอบการตัดสินให้ P02 แต่ระบุว่ารอ "ข้อมูลจากการตรวจ model" ซึ่ง P02 เป็นคนหามาจาก T06 และ T09 · งานจริงอยู่ P03–P04 | คนที่ 2 |
 | CPU/RAM, จำนวน process/instance | **P02 ป้อนผลวัดจาก T09 ให้ คนที่ 2 ตัดสิน** | คนที่ 2 |
 
@@ -227,19 +292,19 @@ T11 (environment)  →  T01 (model)  →  T03 (เพดานข้อควา
 2. **Interface ของ inference module** (T04) — จุดเรียก, input/output, ข้อผิดพลาดตอน model ไม่พร้อม · *ข้อนี้เป็นการตีความของผู้เขียนแผน* ไม่ใช่ข้อความใน P01 โดยตรง — P01-T03 §4 สั่งแค่ว่า evaluation กับ API ต้องใช้วิธีเตรียมข้อความและทำนายชุดเดียวกัน จึงต้องตกลง interface กันก่อนเขียนทั้งสองฝั่ง
 3. **`model_version` scheme จริง** (T07) — ค่าที่ `/predict` ต้องคืน ตาม P01-T02 §3 ที่กำหนดว่าต้องเป็นรุ่นที่ใช้งานจริงและย้อน lineage ได้
 
-**เส้นแบ่งกับ P03 ที่ต้องยืนยันกับคนที่ 2:** [overview](../../overview-plan.md) มอบให้คนที่ 1 ทั้ง "ดูแล P02" และ "ส่วนเชื่อม model เข้า API" ขณะที่ P03 ทั้งก้อนเป็นของคนที่ 2 · แผนนี้ตีความว่า **P02 รับผิดชอบ module และ loader ที่โหลด model แล้วให้ผลทำนาย (T04) ส่วนการเขียน endpoint, validation และ response เป็นของ P03** — *ยังไม่ได้ตกลงกับคนที่ 2 จึงยังไม่ถือเป็นข้อตกลง*
+**เส้นแบ่งกับ P03 ที่ต้องยืนยันกับคนที่ 2:** [overview](../../overview-plan.md) มอบให้คนที่ 1 ทั้ง "ดูแล P02" และ "ส่วนเชื่อม model เข้า API" ขณะที่ P03 ทั้งก้อนเป็นของคนที่ 2 · **คนที่ 1 ตัดสินแล้วเมื่อ 2026-10-07: P02 รับผิดชอบ module และ loader ที่โหลด model แล้วให้ผลทำนาย (T04) ส่วนการเขียน endpoint, validation และ response เป็นของ P03** คนที่ 2 รับไปทำต่อตามนี้
 
-**เงื่อนไขบังคับอีกข้อ:** การเลือกที่เก็บ artifact (T10) **ต้องปิดก่อนคนที่ 2 เริ่มงานที่ต้องนำ model เข้า container ใน P03** ไม่ใช่แค่ "ควรคุยแต่เนิ่น ๆ" · ส่วน Python/dependency convention (T11) **ต้องเสร็จก่อน P02 เริ่ม T01** และควรตกลงให้ตรงกับที่คนที่ 2 จะใช้ใน P03–P04 ตั้งแต่รอบแรก
+**เงื่อนไขบังคับอีกข้อ:** การเลือกที่เก็บ artifact (T10) **ต้องปิดก่อนคนที่ 2 เริ่มงานที่ต้องนำ model เข้า container ใน P03** · ส่วน Python/dependency convention (T11) **ล็อกแล้ว** — คนที่ 2 ใช้ `uv` + `uv.lock` + Python 3.13 ชุดเดียวกัน และใช้ `uv sync --no-default-groups` สำหรับ runtime ใน container
 
 ---
 
 ## 5. Handoff และรายการที่ต้องคุยกับทีม
 
-**สถานะรอบนี้:** เขียนแผน P02 เสร็จ ยังไม่เริ่ม implement ยังไม่ดึง model หรือ dataset ยังไม่สร้างโฟลเดอร์โค้ด (ตาม [P01-T03 §8](P01-T03-system-structure.md#8-หน้าที่ของเอกสารและการสร้างไฟล์) ที่ห้ามสร้างโฟลเดอร์เปล่ารอล่วงหน้า)
+**สถานะรอบนี้:** **T04 `done`** — shared inference module พร้อม interface ที่ล็อกให้คนที่ 2 · **T05 `done`** — evaluate 14,640 แถวได้ **macro-F1 0.7606 / accuracy 0.8100** ยืนยันเลขด้วย scikit-learn แล้ว · **T11 `done`** — uv + uv.lock + Python 3.13 เป็น convention ของทีม · รวม 20 tests ผ่านหมด · **T01 เสร็จ** — pin revision, ยืนยัน licence, อ่าน label mapping จาก config จริง, ยืนยันนิยาม `score` · **T02 เสร็จ** — pin dataset version 4, นิยาม evaluation set 14,640 แถว, ยืนยัน label ตรงกับ model · **T03 เสร็จ** — ล็อกเพดาน 510 content tokens และบันทึกกลับเข้า P01-T02 แล้ว **ปลด blocker ให้ P03** · หลักฐานทั้งสามอยู่ใน `reports/` · ยังไม่เขียนโค้ดใน `src/` (ตาม [P01-T03 §8](P01-T03-system-structure.md#8-หน้าที่ของเอกสารและการสร้างไฟล์) ที่ห้ามสร้างโฟลเดอร์เปล่ารอล่วงหน้า)
 
-**งานที่เหลือและ blocker:** ทุก task (T01–T11) ยังเป็น `planned` ไม่มีส่วนใดเสร็จ · blocker เดียวที่บล็อกการเริ่มคือ **T11** ซึ่งรอให้ตกลง Python version กับคนที่ 2 (มีทางออกชั่วคราวใน T11) ส่วน T10 รอมติทีมแต่ไม่บล็อก T01
+**งานที่เหลือและ blocker:** T06–T10 ยังเป็น `planned` · T01–T05 และ T11 `done` · **ไม่มี blocker** · **แต่ต้อง commit แล้วรัน T05 ซ้ำ** ก่อนใช้ผล evaluation เป็น lineage ของ T07 และฐานเทียบของ T08 เพราะรอบนี้รันบน tree ที่ไม่สะอาด · T11 `in_progress` ปิดไม่ได้จนคนที่ 2 ยืนยัน convention · **ไม่มี blocker ที่หยุดงานฝั่งเราอยู่** · T10 รอมติทีมแต่บล็อกแค่คนที่ 2 ตอนนำ model เข้า container
 
-**Next action:** เริ่มที่ **T11** (environment) เพราะ T01 และ T02 รันไม่ได้ก่อนมันเสร็จ · ขอมติ T10 ขนานไปได้เพราะไม่บล็อก T01 · ถ้าคนที่ 2 ยังตอบ T11 ไม่ได้ ใช้ทางออกใน T11 คือตั้ง environment ใช้งานก่อนแล้ว lock เป็น convention ร่วมทีมภายหลัง
+**Next action:** **commit ก่อน** แล้ว **รัน T05 ซ้ำ** เพื่อให้ผลผูกกับ commit ที่สะอาด · จากนั้น **T06** (รูปแบบ artifact) → **T07** (lineage + `model_version`) → **T10** (ที่เก็บ artifact) → **T08** (tolerance) · **T09** (RAM/เวลาโหลด) เริ่มขนานได้ทุกเมื่อ: ส่ง `pyproject.toml` กับ `uv.lock` ให้คนที่ 2 ยืนยัน T11 และขอมติ T10 · **rotate Kaggle token** เพราะค่าเดิมอยู่ใน transcript แล้ว
 
 ช่องว่างที่พบระหว่างอ่านเอกสาร P01 — **ยังไม่แก้ไฟล์ของคนอื่นในรอบนี้** ต้องคุยกันก่อน:
 
@@ -254,5 +319,8 @@ T11 (environment)  →  T01 (model)  →  T03 (เพดานข้อควา
 
 9. **ตาราง R1 ใน `P01-T03` §9 ไม่ได้ระบุ `environment`** ขณะที่ Proposal §4 สั่งให้ version "code, evaluation data, model revision, **and environment**" → แผนนี้ยึดตาม Proposal (ดูส่วนที่ 1 และ T07) แต่ควรแก้ตาราง R1 ให้ตรงกัน และยืนยันกับทีมว่า R1 ของเราครอบ environment ด้วย
 10. **จำนวนขั้นของ pipeline ไม่ตรงกันระหว่างเอกสาร** — [overview](../../overview-plan.md) เขียน "evaluate → package → register" (3 ขั้น) แต่ `P01-T03` §9 เขียน "prepare → evaluate → package → register" (4 ขั้น) → แผนนี้ยึดตาม P01-T03 ควรแก้ overview ให้ตรง
+
+11. **`overview-plan.md` ยังอ้างว่าเพดานความยาวข้อความค้างอยู่ ทั้งที่ T03 ปิดแล้ว** — บรรทัด 51 ("สถานะยังเป็น `in_progress` เพราะตัวเลขเพดานความยาวข้อความรอยืนยันกับ model ใน P02") และบรรทัด 57 ("ส่วนเพดานความยาวข้อความของ P01-T02 ยังรอผลตรวจ model ใน P02") · **ยังไม่แก้เพราะยังไม่ได้รับอำนาจกับไฟล์นี้** · `P01-T03` §10 แก้แล้วเมื่อ 2026-10-07 ให้เหลือแค่ tolerance (T08) ที่ค้างจริง
+12. **`P01-T03` บรรทัด 168 ใช้คำว่า "ยังติดตาม"** สำหรับเพดานความยาวข้อความ ซึ่งอ่านเหมือนยังไม่ปิด · ตัวชี้ไป P01-T02 §7 ยังถูก แต่ถ้อยคำควรเปลี่ยนเป็นว่าค่าอยู่ที่นั่นแล้ว
 
 **Recheck เมื่อกลับมาทำต่อ:** ถ้า revision ของ model หรือ version ของ dataset เปลี่ยน ต้องตรวจ T01–T03, T05 และ T08 ใหม่ — ผลการวัดรอบก่อนไม่ใช่หลักฐานของรุ่นใหม่
