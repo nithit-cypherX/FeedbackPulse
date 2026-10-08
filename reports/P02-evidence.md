@@ -4,11 +4,11 @@
 
 | | ค่าของรอบที่ลงทะเบียนไว้ |
 |---|---|
-| `model_version` | **`sentiment-6e7ff9fbc17c-850de906`** |
-| `run_id` | `run-20261007T171530Z-e49706` |
-| Code commit | `f1e7f0fa5f40603818e5ab524204dfaa3571d0dd` |
+| `model_version` | **`sentiment-6e7ff9fbc17c-0110c462`** |
+| `run_id` | `run-20261007T192531Z-d36357` |
+| Code commit | `bbe375df940dc5a8b0d1bd716cf94c7ac15dcb92` |
 | ผล evaluation บน 14,640 แถว | **accuracy `0.8100409836065574` · macro-F1 `0.7605863552090412`** |
-| Registry entry | [`registry/sentiment-6e7ff9fbc17c-850de906.json`](registry/sentiment-6e7ff9fbc17c-850de906.json) |
+| Registry entry | [`registry/sentiment-6e7ff9fbc17c-0110c462.json`](registry/sentiment-6e7ff9fbc17c-0110c462.json) |
 
 **เครื่องที่วัดทุกค่าในรายงานนี้:** macOS 15.5 arm64 · Python 3.13.11 · `torch 2.14.1` · `transformers 5.19.0` · `numpy 2.5.3` · `tokenizers 0.23.2` · `safetensors 0.8.0` · **ไม่ใช่ในคอนเทนเนอร์และไม่ใช่บน Azure** — ดูส่วนที่ 8
 
@@ -162,7 +162,8 @@ predictions_sha256 = sha256( "<index>\t<sentiment>\t<repr(score)>\n" ทุก�
 | 1–3 | `40dcb77`, `35e881f`, `ad382f1` | tree สะอาด, `.venv` และ HF cache เดิม · **ยังไม่มี fingerprint** (เพิ่มเข้ามาภายหลัง) เทียบได้ที่ระดับ metric และ confusion matrix |
 | 4 | `f282add` | เหมือนเดิม · เริ่มมี fingerprint |
 | 5 | `f282add` | **ลบ `.venv` และ HF cache แล้วติดตั้งใหม่จาก `uv.lock` และดาวน์โหลด model ใหม่** |
-| 6 | `f1e7f0f` | **ลบ `.venv`, HF cache และ `artifacts/` แล้วรันครบทั้งสี่ขั้นใหม่** — รอบที่ลงทะเบียนในรายงานนี้ |
+| 6 | `f1e7f0f` | **ลบ `.venv`, HF cache และ `artifacts/` แล้วรันครบทั้งสี่ขั้นใหม่** |
+| 7 | `bbe375d` | tree สะอาด · รันหลัง commit การแก้ comment ใน `BEHAVIOUR_PATHS` — **รอบที่ลงทะเบียนในรายงานนี้** |
 
 | ค่า | ความต่างที่วัดได้ |
 |---|---|
@@ -170,9 +171,9 @@ predictions_sha256 = sha256( "<index>\t<sentiment>\t<repr(score)>\n" ทุก�
 | accuracy, macro-F1, macro precision/recall | **0** ทุกรอบ ถึงความละเอียดเต็มของ float |
 | confusion matrix ทุกช่อง · per-class ทั้ง 12 ค่า | **0** ทุกรอบ |
 | แถวที่ข้าม | 0 ทุกรอบ |
-| **เวลารัน** | 648.1 / 674.1 / 678.9 / 650.8 / 674.2 / **351.4** วินาที → **ช่วง 93%** |
+| **เวลารัน** | 648.1 / 674.1 / 678.9 / 650.8 / 674.2 / 351.4 / **643.5** วินาที → **ช่วง 93%** |
 
-**เวลารันไม่นิ่ง** — รอบที่ 6 ใช้ 351.4 วินาที เทียบกับ 648–679 วินาทีในห้ารอบก่อน · ยังไม่ได้หาสาเหตุ (ภาระเครื่องและสถานะ thermal ต่างกันเป็นคำอธิบายที่เป็นไปได้ **แต่ยังไม่ได้วัดเพื่อยืนยัน**) · ตอกย้ำว่าเวลารันใช้เป็นเกณฑ์ตัดสินไม่ได้
+**เวลารันไม่นิ่ง** — รอบที่ 6 ใช้ 351.4 วินาที เทียบกับ 648–679 วินาทีในห้ารอบก่อน แล้วรอบที่ 7 กลับมาที่ 643.5 วินาที · ยังไม่ได้หาสาเหตุ (ภาระเครื่องและสถานะ thermal ต่างกันเป็นคำอธิบายที่เป็นไปได้ **แต่ยังไม่ได้วัดเพื่อยืนยัน**) · ตอกย้ำว่าเวลารันใช้เป็นเกณฑ์ตัดสินไม่ได้
 
 ### Tolerance ที่กำหนด — เฉพาะเงื่อนไขที่วัดแล้ว
 
@@ -355,12 +356,12 @@ repo ต้นทางมีแต่ `pytorch_model.bin` ไม่มี `mode
 
 | สิ่งที่บันทึก | ค่าของรอบที่ลงทะเบียน | ระบุอะไร |
 |---|---|---|
-| `run_id` | `run-20261007T171530Z-e49706` | **การรันครั้งนั้น** · รูปแบบ `run-<UTC timestamp>-<สุ่ม 3 bytes>` |
-| `finished_utc` | `2026-10-07T17:21:22+00:00` | เวลาที่รันเสร็จ |
-| `seconds` | `351.4` | เวลาที่ใช้ |
-| `code.commit` | `f1e7f0fa5f40603818e5ab524204dfaa3571d0dd` · `dirty: false` · `uncommitted: []` | **code รุ่นที่รัน** |
+| `run_id` | `run-20261007T192531Z-d36357` | **การรันครั้งนั้น** · รูปแบบ `run-<UTC timestamp>-<สุ่ม 3 bytes>` |
+| `finished_utc` | `2026-10-07T19:38:39+00:00` | เวลาที่รันเสร็จ |
+| `seconds` | `643.5` | เวลาที่ใช้ |
+| `code.commit` | `bbe375df940dc5a8b0d1bd716cf94c7ac15dcb92` · `dirty: false` · `uncommitted: []` | **code รุ่นที่รัน** |
 | `predictions_sha256` | `05ddac7af1112f6c12267e820832a678b19155bd61fd55a67150e50b7e5ad3b4` | **ผลลัพธ์** ไม่ใช่การรัน |
-| sha256 ของสำเนาผล | `ea43c8965cef796944bec293158e74d9bef656db8d47229d5b928e3173d8e508` | **ไฟล์ผลของรอบนี้** ที่เก็บข้าง registry entry |
+| sha256 ของสำเนาผล | `45338f35ce4ec5024a488ca7e3353fc8f4d7d1ac3f2e295ada429b4bbef324cb` | **ไฟล์ผลของรอบนี้** ที่เก็บข้าง registry entry |
 
 **ทำไมต้องมี `run_id` แยกจาก `predictions_sha256`** — pipeline เป็น deterministic จึงได้ `predictions_sha256` ค่าเดียวกันทุกรอบที่ input เหมือนกัน (ยืนยันแล้วในส่วนที่ 2) · มันจึงระบุ **ผลลัพธ์** ไม่ใช่ **การรัน** และแทน run ID ไม่ได้ · ส่วนสุ่มท้าย `run_id` ทำให้สองรอบที่เริ่มในวินาทีเดียวกันยังแยกกันได้
 
@@ -388,7 +389,7 @@ repo ต้นทางมีแต่ `pytorch_model.bin` ไม่มี `mode
 ### `model_version` scheme
 
 ```
-sentiment-6e7ff9fbc17c-850de906
+sentiment-6e7ff9fbc17c-0110c462
 │         │             │
 │         │             lineage digest 8 ตัว — sha256 ของ lineage record ทั้งก้อน
 │         │             (artifact, model ต้นทาง, dataset, code commit, environment, ผล evaluation)
@@ -405,7 +406,7 @@ model family — อ่านออกใน log และใน response body
 
 **`model_version` เสถียรเมื่อ artifact และ input เหมือนเดิม แต่เปลี่ยนเมื่อรัน evaluation ใหม่** — `run_finished_utc` และ `result_sha256` อยู่ใน payload ที่ hash (และไฟล์ผลมี timestamp อยู่ข้างใน) ดังนั้นรัน `evaluate` ใหม่ก็ได้ digest ใหม่แม้ model, dataset, code และ lockfile ไม่เปลี่ยนเลย
 
-**ยืนยันจากของจริง:** สองรอบติดกันให้ `…-c9386c0e` แล้ว `…-850de906` โดย `artifact_id` เป็น `sentiment-6e7ff9fbc17c` ค่าเดิมทั้งสองรอบ · เลือกคงไว้แบบนี้เมื่อ 2026-10-07 ไม่แก้ digest · เงื่อนไขที่ P03–P04 ต้องทำตามอยู่ใน [phase plan §3](../docs/plans/P02-model-pipeline.md)
+**ยืนยันจากของจริง:** สามรอบติดกันให้ `…-c9386c0e`, `…-850de906` แล้ว `…-0110c462` โดย `artifact_id` เป็น `sentiment-6e7ff9fbc17c` ค่าเดิมทั้งสามรอบ · เลือกคงไว้แบบนี้เมื่อ 2026-10-07 ไม่แก้ digest · เงื่อนไขที่ P03–P04 ต้องทำตามอยู่ใน [phase plan §3](../docs/plans/P02-model-pipeline.md)
 
 ### Registry ปฏิเสธมากกว่ายอมบันทึก
 
@@ -425,7 +426,7 @@ model family — อ่านออกใน log และใน response body
 
 ### ผลไล่ย้อนจาก `model_version` ค่าเดียว — 36/36
 
-เริ่มจากสตริง `sentiment-6e7ff9fbc17c-850de906` อย่างเดียว แล้วไล่ย้อนทุกชั้น โดย **คำนวณ hash จากไฟล์จริงบน disk ทุกตัว ไม่ใช่อ่านค่าที่บันทึกไว้มาเทียบกับตัวเอง**
+เริ่มจากสตริง `sentiment-6e7ff9fbc17c-0110c462` อย่างเดียว แล้วไล่ย้อนทุกชั้น โดย **คำนวณ hash จากไฟล์จริงบน disk ทุกตัว ไม่ใช่อ่านค่าที่บันทึกไว้มาเทียบกับตัวเอง**
 
 | ชั้น | ตรวจอะไร | ผล |
 |---|---|---|
@@ -507,7 +508,7 @@ entry ที่สร้างด้วยโค้ดที่มีข้อ�
 
 ### ความต่างระหว่างสองรอบ — ยังหาสาเหตุไม่ได้
 
-เวลาทุกค่าเร็วขึ้นใกล้ ๆ สองเท่าไปด้วยกัน (import 1.629 → 0.770 s · อ่าน weights 1.309 → 0.640 s · ทำนาย 51 → 26.76 ms · evaluation ทั้งชุด 648–679 → 351.4 s) ขณะที่ **peak RSS ทุกจุดตรงกัน**
+เวลาทุกค่าเร็วขึ้นใกล้ ๆ สองเท่าไปด้วยกัน (import 1.629 → 0.770 s · อ่าน weights 1.309 → 0.640 s · ทำนาย 51 → 26.76 ms) ขณะที่ **peak RSS ทุกจุดตรงกัน** · เปรียบเทียบนี้เป็นของสคริปต์ startup/latency (`measure_once.py`) เท่านั้น — เวลารัน `evaluate.py` ทั้งชุด (ส่วนที่ 2) เป็นคนละสคริปต์ คนละสเกลเวลา ไม่ใช้เทียบกับตัวเลขนี้
 
 **เบาะแสที่วัดได้ ไม่ใช่ข้อสรุป:** เกิดสองครั้งว่าการรันครั้งแรกหลังเว้นช่วงให้ `import` 1.624 s และ 1.555 s แล้วครั้งถัดไปทันทีกลับมาที่ ~0.78 s · ค่าที่เว้นช่วงใกล้ median ของรอบ 2026-10-07 (1.629 s) มาก ซึ่งเข้ากับเรื่องสถานะ page cache ของไลบรารี `torch` · **แต่อธิบาย 5 ตัวอย่างติดกันที่ ~1.63 s ของรอบนั้นไม่ได้** เพราะถ้าเป็น cache ล้วน ตัวอย่างที่สองควรเร็วขึ้นแล้ว · ไม่ได้บันทึก CPU load หรืออุณหภูมิไว้ตอนวัดรอบแรก จึงเทียบกลับไปไม่ได้
 
@@ -638,7 +639,7 @@ from feedbackpulse.model_files import ensure_model_files
 
 clf = SentimentClassifier.load(ensure_model_files(), model_version="<อ่านจาก registry entry>")  # ครั้งเดียวตอน process เริ่ม
 result = clf.predict("My flight was delayed.")   # ต่อ request
-# -> Prediction(sentiment='negative', score=0.943575, model_version='sentiment-6e7ff9fbc17c-850de906')
+# -> Prediction(sentiment='negative', score=0.943575, model_version='sentiment-6e7ff9fbc17c-0110c462')
 ```
 
 | ตรวจ | ผล |

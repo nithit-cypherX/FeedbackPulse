@@ -56,11 +56,11 @@
 
 **การส่งต่องาน:** P01 บันทึกข้อตกลงไว้ครบแล้ว · **เพดานความยาวข้อความปิดแล้วใน P02-T03** จึงเหลือเพียง **รายชื่อเจ้าของงานใน [Proposal §7](PROPOSAL.md) ที่ยังเป็น `[Name]`** ที่ทำให้ยังไม่ปิด P01 ทั้งส่วน
 
-## P02 เสร็จแล้ว — 2026-10-07
+## P02 เสร็จแล้ว 
 
 ดู [P02 phase plan](docs/plans/P02-model-pipeline.md) · เจ้าของงาน: คนที่ 1
 
-- `model_version` ที่ใช้งาน: `sentiment-6e7ff9fbc17c-850de906` พร้อม lineage ใน `reports/registry/` · run ID `run-20261007T171530Z-e49706`
+- `model_version` ที่ใช้งาน: `sentiment-6e7ff9fbc17c-0110c462` พร้อม lineage ใน `reports/registry/` · run ID `run-20261007T192531Z-d36357`
 - ผล evaluation บน 14,640 แถว: **accuracy 0.8100 · macro-F1 0.7606** ([หลักฐาน ส่วนที่ 2](reports/P02-evidence.md))
 
 **การส่งต่องาน:**
