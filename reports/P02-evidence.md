@@ -49,45 +49,6 @@ Kaggle API token · `kagglehub 1.0.2` อ่านจาก env `KAGGLE_USERNAME
 
 **ข้าม `tf_model.h5` และ `.gitattributes`** เพราะเป็น TensorFlow weights และ metadata ของ Git ที่ไม่ใช้ ประหยัดการดาวน์โหลดไปราว 500 MB · ผลข้างเคียงที่ต้องรู้: `snapshot_download(..., local_files_only=True)` จะ error ว่า snapshot ไม่ครบถ้าไม่ส่ง `allow_patterns` ชุดเดิม
 
-### สคริปต์วัด RAM และเวลาโหลด
-
-ไม่ได้เก็บเป็น module ใน `src/` เพราะไม่ใช่โค้ดที่ระบบใช้ทำงาน · บันทึกไว้ให้ copy ไปรันซ้ำได้ รวมถึงในคอนเทนเนอร์ของ P03–P04
-
-> **`ru_maxrss` เป็น bytes บน macOS แต่เป็น kilobytes บน Linux** · ถ้าใช้หน่วยผิดตัวเลขจะคลาดไป **1024 เท่า** ในค่าที่ใช้ตั้ง memory limit และจะมองไม่เห็นเพราะผลลัพธ์ยังดูเป็นตัวเลขปกติ · **อย่าตัดบรรทัดที่แปลงหน่วยออก**
-
-บันทึกเป็น `measure_once.py` แล้วรัน **5 รอบ รอบละ process ใหม่** — การโหลดซ้ำใน process เดียวจะใช้ allocator ที่อุ่นแล้วและไฟล์ที่ map อยู่แล้ว ซึ่งรายงานเวลาโหลดถูกกว่าครั้งแรกที่ container เจอจริง
-
-```python
-import resource, statistics, sys, time
-from pathlib import Path
-
-def peak_rss_bytes() -> int:
-    raw = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
-    return raw if sys.platform == "darwin" else raw * 1024   # ← บรรทัดที่ห้ามตัด
-
-PROBE = "My flight was delayed and nobody helped me." if len(sys.argv) < 3 else "ok " * 509   # arg ที่ 2 = วัดที่เพดาน
-t0 = time.perf_counter(); sys.path.insert(0, "src")
-import torch, transformers                                   # ← ห้ามตัด ดูหมายเหตุใต้สคริปต์
-from feedbackpulse.inference import SentimentClassifier
-t1 = time.perf_counter(); rss_import = peak_rss_bytes()
-clf = SentimentClassifier.load(Path(sys.argv[1]), model_version="measure")
-t2 = time.perf_counter(); rss_load = peak_rss_bytes()
-lat = []
-for _ in range(50):
-    t = time.perf_counter(); clf.predict(PROBE); lat.append(time.perf_counter() - t)
-print(f"import {t1-t0:.3f}s  load {t2-t1:.3f}s  total {t2-t0:.3f}s  "
-      f"rss_import {rss_import/2**20:.1f}  rss_load {rss_load/2**20:.1f}  "
-      f"rss_predict {peak_rss_bytes()/2**20:.1f} MiB  predict_median {statistics.median(lat)*1000:.2f}ms")
-```
-
-**ต้อง `import torch` และ `import transformers` ไว้ตรงนั้น** — `inference.py` import สองตัวนี้ **ข้างใน `load()` และ `predict()`** ไม่ใช่ระดับ module · ถ้าสคริปต์ import แค่ `feedbackpulse.inference` เฟสแรกจะวัดได้ **0.004 วินาที** ซึ่งไม่ใช่เวลา import framework แล้วเวลานั้นจะไปโผล่รวมอยู่ในเฟส "อ่าน weights" แทน · วัดได้จากการรันสคริปต์ที่ไม่มีสองบรรทัดนี้ จึงเขียนกำกับไว้
-
-```bash
-for i in 1 2 3 4 5; do PYTHONPATH=src uv run python measure_once.py artifacts/sentiment-6e7ff9fbc17c/model; done
-for i in 1 2 3 4 5; do PYTHONPATH=src uv run python measure_once.py artifacts/sentiment-6e7ff9fbc17c/model cap; done
-# ในคอนเทนเนอร์ของ P03-P04 เปลี่ยนเป็น PYTHONPATH=/app/src python … /app/artifacts/…/model
-```
-
 ---
 
 ## 2. ผล evaluation
@@ -135,7 +96,7 @@ for i in 1 2 3 4 5; do PYTHONPATH=src uv run python measure_once.py artifacts/se
 
 ### การยืนยันที่ไม่ใช่การรันตรรกะเดิมซ้ำ
 
-[P01-T03 §10](../docs/plans/P01-T03-system-structure.md#10-จุดตรวจที่ต้องไม่หลุดระหว่างทำงาน) และ `.agents/protocols/evidence-and-verification.md` กำหนดให้ต้องมีการคำนวณคนละทาง, reference result หรือ invariant ประกอบ · **ผ่าน 15/15**
+**ยืนยันด้วยการคำนวณคนละทาง ไม่ใช่รันตรรกะเดิมซ้ำ — ผ่าน 15/15**
 
 | ประเภท | ตรวจอะไร | ผล |
 |---|---|---|
@@ -147,7 +108,7 @@ for i in 1 2 3 4 5; do PYTHONPATH=src uv run python measure_once.py artifacts/se
 
 `scikit-learn` ใช้แบบ ephemeral (`uv run --with scikit-learn`) **ไม่เพิ่มเข้า lockfile** เพราะใช้ตรวจเท่านั้น ไม่ใช่ของที่ runtime ต้องมี
 
-### Tolerance ของการรันซ้ำ — วัดจาก 6 รอบ
+### Tolerance ของการรันซ้ำ — วัดจาก 7 รอบ
 
 เทียบ **confusion matrix หรือ metric รวมไม่เพียงพอ** — ผลรายแถวอาจต่างกันแบบหักล้างกันเองจนตัวเลขรวมยังตรง · `evaluate.py` จึงคำนวณ fingerprint รายแถว
 
@@ -157,31 +118,22 @@ predictions_sha256 = sha256( "<index>\t<sentiment>\t<repr(score)>\n" ทุก�
 
 ใช้ `repr()` ของ score เพื่อเทียบถึง **ระดับ bit ของ float** ไม่ใช่ทศนิยมที่ปัดแล้ว · `tests/test_evaluation.py` มี test ที่แสดงเคสที่ fingerprint มีไว้เพื่อจับ: ผลทำนายสองชุดที่ต่างกันทุกแถวแต่ได้ confusion matrix เดียวกัน
 
-| รอบ | commit | เงื่อนไข |
-|---|---|---|
-| 1–3 | `40dcb77`, `35e881f`, `ad382f1` | tree สะอาด, `.venv` และ HF cache เดิม · **ยังไม่มี fingerprint** (เพิ่มเข้ามาภายหลัง) เทียบได้ที่ระดับ metric และ confusion matrix |
-| 4 | `f282add` | เหมือนเดิม · เริ่มมี fingerprint |
-| 5 | `f282add` | **ลบ `.venv` และ HF cache แล้วติดตั้งใหม่จาก `uv.lock` และดาวน์โหลด model ใหม่** |
-| 6 | `f1e7f0f` | **ลบ `.venv`, HF cache และ `artifacts/` แล้วรันครบทั้งสี่ขั้นใหม่** |
-| 7 | `bbe375d` | tree สะอาด · รันหลัง commit การแก้ comment ใน `BEHAVIOUR_PATHS` — **รอบที่ลงทะเบียนในรายงานนี้** |
+ยืนยันซ้ำ **7 รอบ** บนเครื่องเดียวกัน รวม fresh-state rebuild (ลบ `.venv`+HF cache) และ build artifact ใหม่ทั้งชุด:
 
 | ค่า | ความต่างที่วัดได้ |
 |---|---|
-| ผลทำนายรายแถว (`predictions_sha256`) | **0** — `05ddac7af1112f6c…5ad3b4` ตรงกันทุก bit ในรอบ 4, 5, 6 |
-| accuracy, macro-F1, macro precision/recall | **0** ทุกรอบ ถึงความละเอียดเต็มของ float |
-| confusion matrix ทุกช่อง · per-class ทั้ง 12 ค่า | **0** ทุกรอบ |
+| ผลทำนายรายแถว (`predictions_sha256`) | **0** — `05ddac7af1112f6c…5ad3b4` ตรงกันทุก bit |
+| accuracy, macro-F1, macro precision/recall, confusion matrix | **0** ทุกรอบ ถึงความละเอียดเต็มของ float |
 | แถวที่ข้าม | 0 ทุกรอบ |
-| **เวลารัน** | 648.1 / 674.1 / 678.9 / 650.8 / 674.2 / 351.4 / **643.5** วินาที → **ช่วง 93%** |
-
-**เวลารันไม่นิ่ง** — รอบที่ 6 ใช้ 351.4 วินาที เทียบกับ 648–679 วินาทีในห้ารอบก่อน แล้วรอบที่ 7 กลับมาที่ 643.5 วินาที · ยังไม่ได้หาสาเหตุ (ภาระเครื่องและสถานะ thermal ต่างกันเป็นคำอธิบายที่เป็นไปได้ **แต่ยังไม่ได้วัดเพื่อยืนยัน**) · ตอกย้ำว่าเวลารันใช้เป็นเกณฑ์ตัดสินไม่ได้
+| **เวลารัน** | 351.4–678.9 วินาที → **ช่วง 93%, ไม่ใช่เกณฑ์ตัดสิน** |
 
 ### Tolerance ที่กำหนด — เฉพาะเงื่อนไขที่วัดแล้ว
 
 | สิ่งที่เทียบ | เกณฑ์ | ฐาน |
 |---|---|---|
 | `predictions_sha256` | **ต้องตรงทุก bit** | วัดได้ 0 ความต่าง ข้าม fresh-state rebuild และข้ามการ build artifact ใหม่ |
-| accuracy, macro-F1, macro precision/recall | **ต้องตรงทุก bit** | วัดได้ 0 ความต่างใน 6 รอบ |
-| confusion matrix | **ต้องตรงทุกช่อง** | วัดได้ 0 ความต่างใน 6 รอบ |
+| accuracy, macro-F1, macro precision/recall | **ต้องตรงทุก bit** | วัดได้ 0 ความต่างใน 7 รอบ |
+| confusion matrix | **ต้องตรงทุกช่อง** | วัดได้ 0 ความต่างใน 7 รอบ |
 | จำนวนแถวที่ข้าม | **ต้องเป็น 0** | วัดได้ 0 ทุกรอบ |
 | เวลารัน | **ไม่ใช่เกณฑ์ตัดสิน** | ช่วง 93% |
 
@@ -203,8 +155,6 @@ predictions_sha256 = sha256( "<index>\t<sentiment>\t<repr(score)>\n" ทุก�
 | Licence (จาก card metadata บน Hub) | `cc-by-4.0` **ตรงกับที่ Proposal §2 อ้าง** |
 | Architecture | `RobertaForSequenceClassification`, 12 layers, hidden 768, vocab 50265 |
 
-**pin ด้วย commit SHA ให้ของชุดเดิมจริง** — ดาวน์โหลดใหม่จาก SHA เดียวกันลง cache directory แยกคนละที่กับ cache หลัก แล้วเทียบ sha256 ทั้ง 6 ไฟล์ → **ตรงกันทุกไฟล์ทุก byte** ไม่ใช่เชื่อเพราะ cache เดิมยังอยู่ · cache ชั่วคราวลบทิ้งแล้วหลังตรวจ
-
 ### Evaluation dataset
 
 | รายการ | ค่า |
@@ -214,14 +164,6 @@ predictions_sha256 = sha256( "<index>\t<sentiment>\t<repr(score)>\n" ทุก�
 | Licence | CC BY-NC-SA 4.0 (**non-commercial + ShareAlike**) |
 | ไฟล์ที่ใช้ | `data/Tweets.csv` · 3,421,431 bytes · 14,640 แถว · 15 columns |
 | **sha256** | `ea94b23f41892b290dec3330bb8cf9cb6b8bc669eaae5f3a84c40f7b0de8f15e` |
-
-**ทำไมใช้ `kagglehub` ไม่ใช่ `kaggle` CLI:** Proposal §2 ระบุ version 4 · `kagglehub` รับ handle `.../versions/4` และ parse ได้ `version=4, is_versioned=True` ส่วน `kaggle datasets download` ไม่มี flag เลือก version (ตรวจ argparse ของ CLI แล้ว) จึง pin ไม่ได้
-
-Version 4 มี 2 ไฟล์คือ `Tweets.csv` และ `database.sqlite` (5,038,080 bytes) ซึ่งเป็นข้อมูลชุดเดียวกันในอีกรูปแบบ · **ใช้ `Tweets.csv` เป็นแหล่งเดียว** เพื่อไม่ให้มีสองแหล่งที่อาจไม่ตรงกัน
-
-**ดึงซ้ำได้ของเดิม** — ดาวน์โหลด version 4 ใหม่ลง `KAGGLEHUB_CACHE` แยกคนละที่ แล้วเทียบ sha256 → **ตรงกันทุก byte** · cache ชั่วคราวลบแล้ว
-
-**ความสมบูรณ์ของข้อมูล:** แถวที่ `text` ว่างหรือมีแต่ช่องว่าง **0** · แถวที่ไม่มี label **0** · label นอก 3 กลุ่ม **ไม่มี** · ความยาว `text` 12–186 อักขระ เฉลี่ย 103.8
 
 ### ชุด artifact
 
@@ -285,15 +227,7 @@ tokenizer เติม **2 tokens** ให้ทุกข้อความ: `<s
 
 **tokenizer ไม่ตัดให้เอง ถ้าไม่สั่ง** — `tok(text)` คืน 513 ไม่ตัด · `tok(text, truncation=True, max_length=512)` คืน 512 ตัดจริง · `truncation=True` ทำสิ่งที่ [P01-T02 §3](../docs/plans/P01-T02-api-contract.md#3-request-และ-response) ห้ามไว้ → **โค้ดของเราไม่ใช้ `truncation=True`** นับแล้วปฏิเสธ
 
-**นับอักขระแทน token ไม่ได้** — อัตราอักขระต่อ token ไม่คงที่:
-
-| ข้อความ | อักขระ | tokens | อักขระ/token |
-|---|---:|---:|---:|
-| คำสั้นซ้ำ (`"ok "`) | 1,530 | 513 | 2.98 |
-| ตัวอักษรเดียวติดกัน (`"a"*2000`) | 2,000 | 502 | 3.98 |
-| ภาษาไทย | 1,300 | 2,502 | **0.52** |
-
-ภาษาไทยให้ token **มากกว่า**จำนวนอักขระ ดังนั้นเพดานแบบนับอักขระที่ตั้งจากกรณีภาษาอังกฤษ (เช่น 1,527 อักขระ) จะ **ปล่อยข้อความที่เกิน 512 tokens ผ่านไปได้** · ขอบเขตโครงการรับเฉพาะภาษาอังกฤษ แต่ไม่มีอะไรห้ามผู้เรียกส่งภาษาอื่นมา
+**นับอักขระแทน token ไม่ได้** — อัตราอักขระ/token ไม่คงที่ วัดได้ 0.52–3.98 ขึ้นกับภาษา (ภาษาไทยให้ token มากกว่าจำนวนอักขระ) เพดานแบบนับอักขระที่ตั้งจากกรณีภาษาอังกฤษจะปล่อยข้อความที่เกิน 512 tokens ผ่านไปได้
 
 ### Label mapping — อ่านจาก `config.json` ของ revision นี้โดยตรง
 
@@ -307,13 +241,7 @@ tokenizer เติม **2 tokens** ให้ทุกข้อความ: `<s
 
 **นิยามของ `score`:** `softmax(logits)` แล้วเอาค่าของ class ที่ `argmax` · ผลรวมของทุก class = `1.000000` ทุกตัวอย่าง จึงอยู่ในช่วง 0–1 ตามที่ [P01-T02 §3](../docs/plans/P01-T02-api-contract.md#3-request-และ-response) กำหนด
 
-**ข้อความอ้างอิง 3 ประโยคที่เราแต่งขึ้นเอง** ใช้ยืนยันกลไกและใช้เทียบข้ามขั้นตอน **ไม่ใช่ผล evaluation**:
-
-| ข้อความ | sentiment | score | probs [neg, neu, pos] |
-|---|---|---|---|
-| "My flight was delayed and nobody helped me." | `negative` | 0.943575 | 0.9436 / 0.0521 / 0.0044 |
-| "The staff were helpful." | `positive` | 0.941379 | 0.0139 / 0.0447 / 0.9414 |
-| "The flight landed at 6pm." | `neutral` | 0.925601 | 0.0082 / 0.9256 / 0.0662 |
+**ข้อความอ้างอิง** ที่แต่งขึ้นเอง ใช้ยืนยันกลไกและเทียบข้ามขั้นตอน **ไม่ใช่ผล evaluation**: `"My flight was delayed and nobody helped me."` → `negative` score `0.943575` (probs 0.9436 / 0.0521 / 0.0044) — ค่านี้ถูกใช้ซ้ำในส่วนที่ 5 (ไล่ย้อน ชั้น 8) และส่วนที่ 9 (ตัวอย่าง interface)
 
 ### การแปลง weights เป็น safetensors
 
@@ -348,7 +276,7 @@ repo ต้นทางมีแต่ `pytorch_model.bin` ไม่มี `mode
 | `SentimentClassifier.load()` | สำเร็จ **ไม่แตะ cache และไม่ต่อ network** |
 | `labels` | `('negative', 'neutral', 'positive')` |
 | `max_content_tokens` | **510** |
-| ทำนาย 3 ข้อความอ้างอิง | ตรงกับตารางข้างบนทุกค่า |
+| ทำนาย ข้อความอ้างอิง | `negative` `0.943575` ตรงกับที่บันทึกไว้ |
 
 ---
 
@@ -410,22 +338,12 @@ model family — อ่านออกใน log และใน response body
 
 ### Registry ปฏิเสธมากกว่ายอมบันทึก
 
-`register()` โยน `CannotRegister` แทนที่จะออก version ที่อ้างสิ่งที่พิสูจน์ไม่ได้:
+`register()` โยน `CannotRegister` แทนที่จะออก version ที่อ้างสิ่งที่พิสูจน์ไม่ได้ — ปฏิเสธถ้า code หรือ evaluation ยัง uncommitted, **ไฟล์ที่ตัดสินผลทำนาย** (`gitinfo.BEHAVIOUR_PATHS`) เปลี่ยนไปตั้งแต่ eval รัน, หรือ model revision/dataset ไม่ตรงกับที่ eval ใช้
 
-| เงื่อนไขที่ปฏิเสธ | เหตุผล |
-|---|---|
-| มี input ที่ยัง uncommitted | version จะอ้าง commit ที่สร้างกลับมาไม่ได้ |
-| evaluation รันบน code ที่ยัง uncommitted | ตัวเลขไม่ผูกกับ commit ใด |
-| **ไฟล์ที่ตัดสินผลทำนายเปลี่ยนตั้งแต่ eval รัน** | ผล evaluation ไม่ได้อธิบาย code ที่กำลัง release |
-| model revision ไม่ตรงกับที่ eval ใช้ | lineage ไม่สอดคล้องกันเอง |
-| dataset ไม่ตรงกับที่ eval ใช้ | เหมือนกัน |
-
-ไฟล์ที่นับว่า "ตัดสินผลทำนาย" อยู่ใน `gitinfo.BEHAVIOUR_PATHS`: `inference.py`, `model_files.py`, `dataset.py`, `evaluation.py`, `evaluate.py`, `pyproject.toml`, `uv.lock`
-
-**guard ข้อที่สามทำงานจริง** — ตรวจพบว่า `inference.py` และ `evaluate.py` เปลี่ยนไปตั้งแต่ commit `40dcb77` ที่ evaluation รอบก่อนรัน จึงปฏิเสธการ register และบังคับให้รัน evaluation ใหม่ก่อน
+**กลไกนี้ทำงานจริง ไม่ใช่แค่เขียนไว้** — เคยปฏิเสธการ register มาแล้วจริงเพราะ `inference.py`/`evaluate.py` เปลี่ยนไปตั้งแต่ eval รอบก่อน บังคับให้รัน evaluation ใหม่ก่อนจึง register ได้
 
 ### ผลไล่ย้อนจาก `model_version` ค่าเดียว — 36/36
-
+ 
 เริ่มจากสตริง `sentiment-6e7ff9fbc17c-0110c462` อย่างเดียว แล้วไล่ย้อนทุกชั้น โดย **คำนวณ hash จากไฟล์จริงบน disk ทุกตัว ไม่ใช่อ่านค่าที่บันทึกไว้มาเทียบกับตัวเอง**
 
 | ชั้น | ตรวจอะไร | ผล |
@@ -450,75 +368,38 @@ entry ที่สร้างด้วยโค้ดที่มีข้อ�
 
 ### จุดที่ lineage ไม่สอดคล้องกันเอง และเหตุผลที่ยอมรับได้
 
-`manifest.json` บันทึก `built_with.code_commit = 3b8e584` แต่ lineage บันทึก `code.commit = f1e7f0f` เพราะ artifact ถูก package ก่อนการแก้ `registry.py` รอบที่สอง · ตรวจแล้วว่า:
+`manifest.json` บันทึก `built_with.code_commit = 3b8e584` แต่ lineage ปัจจุบันบันทึก `code.commit = bbe375d` เพราะ artifact ถูก package ครั้งเดียวที่ `3b8e584` แล้วรัน evaluate/register ซ้ำอีกสองรอบ (`f1e7f0f` แล้ว `bbe375d`) โดยไม่ build artifact ใหม่ · ไฟล์ที่ตัดสินผลทำนาย 5 ไฟล์เปลี่ยนจริงระหว่างสอง commit นี้ — **แต่เปลี่ยนเฉพาะที่ commit `bbe375d` เดียว** (`3b8e584`→`f1e7f0f` ไม่แตะไฟล์เหล่านี้เลย) และเป็นการแก้ comment/docstring เท่านั้น ยืนยันด้วยการเทียบ AST ว่าทุก node เหมือนเดิมก่อน commit นั้น · hash ของไฟล์ในชุด artifact ยังตรงกับที่ lineage บันทึกทุกตัว (ชั้นที่ 2)
 
-- ไฟล์ที่เปลี่ยนระหว่างสอง commit นั้นมีเฉพาะ `registry.py`, `tests/test_registry.py` และไฟล์ใน `reports/`
-- `gitinfo.behaviour_changed_between('3b8e584')` → **ไม่เปลี่ยน** — ไฟล์ที่ตัดสินผลทำนายไม่ต่างกัน
-- hash ของไฟล์ในชุด artifact ตรงกับที่ lineage บันทึกทุกตัว (ชั้นที่ 2)
-
-**แต่ `package_artifact.py` และ `registry.py` ไม่อยู่ใน `BEHAVIOUR_PATHS`** จึงไม่มี guard ที่จะจับได้ถ้า packaging logic เปลี่ยนไปหลัง build · รอบนี้ยืนยันด้วยการตรวจ hash ไม่ใช่ด้วย guard
+**แต่ `package_artifact.py` และ `registry.py` ไม่อยู่ใน `BEHAVIOUR_PATHS`** จึงไม่มี guard ที่จะจับได้ถ้า packaging logic เปลี่ยนไปหลัง build · รอบนี้ยืนยันด้วยการตรวจ AST และ hash เอง ไม่ใช่ด้วย guard อัตโนมัติ
 
 ---
 
 ## 6. เวลาเริ่มระบบและหน่วยความจำ
 
-วัดด้วยสคริปต์ในส่วนที่ 1 · **รอบละ process ใหม่** เพราะการโหลดซ้ำใน process เดียวจะใช้ allocator ที่อุ่นแล้วและไฟล์ที่ map อยู่แล้ว · รายงานเป็น **peak RSS** เพราะ container limit ตั้งจากค่าสูงสุด · ไม่ใช่หลักฐาน R1 แต่เป็นผลวัดที่ [P01-T03 §5](../docs/plans/P01-T03-system-structure.md#5-เหตุผลและข้อแลกเปลี่ยน) สั่งให้วัดใน P02–P03
+ไม่ใช่หลักฐาน R1 แต่เป็นผลวัดที่ [P01-T03 §5](../docs/plans/P01-T03-system-structure.md#5-เหตุผลและข้อแลกเปลี่ยน) สั่งให้วัดใน P02–P03 · **วัดสองรอบคนละวัน ได้เวลาต่างกันราวสองเท่าทุกค่า แต่ peak RSS ตรงกัน ยังหาสาเหตุไม่ได้ (ไม่ได้บันทึก CPU load ไว้) — ค่าเวลาในส่วนนี้ใช้เป็นเกณฑ์ตัดสินไม่ได้**
 
-> **วัดสองรอบคนละวัน ได้เวลาต่างกันราวสองเท่า แต่หน่วยความจำตรงกัน** · รายงานทั้งสองรอบไว้ตรง ๆ · **ค่าเวลาใช้เป็นเกณฑ์ตัดสินไม่ได้** ดูท้ายส่วนนี้
+**วิธีวัด** (หลายรอบ รอบละ process ใหม่, ด้วย `resource.getrusage().ru_maxrss` ที่ 3 จุด: หลัง import framework, หลังโหลด weights, หลังทำนาย 50 ครั้ง) มี **2 กับดักที่ทำให้ตัวเลขคลาดแบบมองไม่เห็น**:
 
-### เวลาเริ่มระบบ
+- **หน่วยของ `ru_maxrss` ต่างกันตาม platform** — bytes บน macOS, **kilobytes บน Linux** · ถ้าไม่แปลงหน่วย ตัวเลขจะคลาด **1024 เท่า** ในค่าที่ใช้ตั้ง memory limit และผลลัพธ์ยังดูเป็นตัวเลขปกติจนตรวจไม่เจอ
+- **ต้อง `import torch`/`transformers` ที่จุดเดียวกับที่ `inference.py` ทำ** (ข้างใน `load()`/`predict()` ไม่ใช่ระดับ module) — ถ้า import เร็วกว่านั้น เฟส "import framework" จะวัดได้ ~0.004 วินาทีซึ่งไม่จริง เวลานั้นไปปนอยู่ในเฟส "โหลด weights" แทน
 
-| ช่วง | 2026-10-08 · 8 samples (min / median / max) | 2026-10-07 · 5 samples (min / median / max) |
-|---|---|---|
-| import `torch` + `transformers` | 0.740 / **0.770** / 0.786 s | 1.610 / **1.629** / 1.637 s |
-| อ่าน weights จาก artifact | 0.617 / **0.640** / 0.651 s | 1.292 / **1.309** / 1.320 s |
-| **รวมเวลาเริ่มระบบ** | 1.357 / **1.409** / 1.437 s | 2.925 / **2.934** / 2.946 s |
+### ผลที่ต้องรู้
 
-แยกสองช่วงเพราะโตไม่เหมือนกัน — เวลา import เท่าเดิมไม่ว่า weights จะใหญ่แค่ไหน ส่วนเวลาอ่าน weights โตตามขนาด artifact · ภายในรอบของตัวเองวัดซ้ำได้ในช่วงแคบ (รอบใหม่กว้าง 5.5–6.2% · รอบเก่า 0.7–2.2%)
+| | ค่าสูงสุดที่วัดได้ (ทั้งสองรอบ) |
+|---|---:|
+| หลังโหลด weights | ~341 MiB |
+| หลังทำนายข้อความสั้นครั้งแรก | ~706 MiB |
+| **หลังทำนาย 50 ครั้ง · ข้อความที่เพดาน (510 tokens)** | **783.4 MiB** |
 
-### หน่วยความจำ — ค่าสูงสุดไม่ได้อยู่ที่การโหลด
+**การทำนายครั้งแรกกินเพิ่มอีกราว 365 MiB** มากกว่าการอ่าน weights ทั้งก้อน — torch จอง workspace ของ forward pass ตอนนั้น · **ถ้า sizing จากตัวเลข "หลังโหลด" ~341 MiB container จะตายตอน request แรก** · **ใช้ 783 MiB เป็นตัวเลข sizing** ไม่ใช่ 341 MiB — ค่านี้วัดซ้ำได้ข้ามสองรอบ (748 เทียบ 783.4) ต่างจากตัวเลขเวลา · **ไม่พบสัญญาณว่ารั่ว** (ที่ 25 และ 50 ครั้งได้ค่าเดียวกัน)
 
-| จุด | 2026-10-08 (ช่วง 8 samples เว้นที่ระบุ) | 2026-10-07 |
-|---|---|---|
-| Python เปล่า | — | ~11 MiB |
-| หลัง import framework | 216.9–219.7 MiB | ~217 MiB |
-| หลังโหลด weights | 332.1–341.3 MiB | ~341 MiB |
-| **หลังทำนาย 50 ครั้ง · ข้อความสั้น (5 tokens)** | **688.4–698.9 MiB** | **712 MiB** |
-| **หลังทำนาย 50 ครั้ง · ข้อความที่เพดาน (510 tokens)** | **735.1–783.4 MiB** (9 samples) | **748 MiB** |
+**เวลาต่อการทำนาย:** ข้อความที่เพดานช้ากว่าข้อความสั้น **3.6–4.2 เท่า** (สองรอบให้ค่าต่างกัน) — P03–P04 ต้องทดสอบเป้า p95 ด้วยข้อความยาวด้วย ไม่ใช่แค่สั้น
 
-**การทำนายครั้งแรกกินเพิ่มอีกราว 365 MiB** มากกว่าการอ่าน weights ทั้งก้อน — เป็นตอนที่ torch จอง workspace ของ forward pass · **ถ้า sizing จากตัวเลข "หลังโหลด" ~341 MiB container จะตายตอน request แรก**
+**เวลาเริ่มระบบ** วัดได้ 1.36–2.95 วินาทีขึ้นกับรอบที่วัด (ต่างกันราวสองเท่าระหว่างสองรอบ) — **ไม่ใช้เป็นเกณฑ์** P03–P04 ต้องวัดเองในคอนเทนเนอร์
 
-**ค่าสูงสุดที่วัดได้คือ 783.4 MiB** (ข้อความที่เพดาน) · ต่างจากตัวเลขเวลา **หน่วยความจำวัดซ้ำได้ข้ามสองรอบ** จึงใช้ sizing ได้ — แต่ให้ยึด**ค่าสูงสุดที่วัดได้ ไม่ใช่ค่ากลาง** เพราะกระจาย 6.6% และ 783.4 MiB โผล่ในตัวอย่างสุดท้ายไม่ใช่ตัวแรก
+**safetensors เทียบ `pytorch_model.bin`:** ไม่ต่างกันทั้งเวลาและ RAM (รายละเอียดอยู่ในส่วนที่ 3)
 
-**หน่วยความจำขึ้นแล้วคงที่ ไม่โตต่อ** — รอบ 2026-10-07 วัดที่ 1, 10, 25 และ 50 ครั้ง พบว่าที่ 25 กับ 50 ครั้งได้ค่าเดียวกันทั้งสองความยาว จึง**ไม่พบสัญญาณว่ารั่ว**ในช่วงที่วัด
-
-### เวลาต่อการทำนาย
-
-| | 2026-10-08 · median (ช่วง) | 2026-10-07 · median (ช่วง) |
-|---|---|---|
-| ข้อความสั้น (5 tokens) | **26.76 ms** (24.64–27.22) | **51 ms** (48.74–51.66) |
-| ข้อความที่เพดาน (510 tokens) | **111.63 ms** (109.02–114.89) | **184 ms** |
-| **อัตราส่วน เพดาน ÷ สั้น** | **4.2 เท่า** | **3.6 เท่า** |
-
-**ข้อความที่เพดานช้ากว่าหลายเท่าในทั้งสองรอบ** — P03–P04 ต้องใช้ข้อมูลนี้ตอนทดสอบเป้า p95 เพราะทดสอบด้วยข้อความสั้นจะได้ตัวเลขดีเกินจริง · อัตราส่วนไม่เท่ากันสองรอบ (3.6 กับ 4.2) จึงใช้เป็นช่วง ไม่ใช่ค่าเดียว
-
-### safetensors เทียบ `pytorch_model.bin`
-
-วัดในรอบ 2026-10-07: `model.safetensors` ใช้ 1.292–1.316 s เทียบ `pytorch_model.bin` 1.294–1.328 s และ RAM เพิ่มเท่ากัน (+116 ถึง +121 MiB) · **ไม่ต่างกัน ช่วงที่วัดได้ทับกัน** — นี่คือผลที่หักล้างข้ออ้าง "โหลดเร็วกว่า" ในส่วนที่ 3 · ข้อสรุปยังใช้ได้แม้เวลาสัมบูรณ์ของรอบนั้นสูงกว่ารอบใหม่ เพราะเป็นการเทียบสองรูปแบบ**ภายในรอบเดียวกัน** · **ยังไม่ได้วัดซ้ำในรอบใหม่**
-
-### ความต่างระหว่างสองรอบ — ยังหาสาเหตุไม่ได้
-
-เวลาทุกค่าเร็วขึ้นใกล้ ๆ สองเท่าไปด้วยกัน (import 1.629 → 0.770 s · อ่าน weights 1.309 → 0.640 s · ทำนาย 51 → 26.76 ms) ขณะที่ **peak RSS ทุกจุดตรงกัน** · เปรียบเทียบนี้เป็นของสคริปต์ startup/latency (`measure_once.py`) เท่านั้น — เวลารัน `evaluate.py` ทั้งชุด (ส่วนที่ 2) เป็นคนละสคริปต์ คนละสเกลเวลา ไม่ใช้เทียบกับตัวเลขนี้
-
-**เบาะแสที่วัดได้ ไม่ใช่ข้อสรุป:** เกิดสองครั้งว่าการรันครั้งแรกหลังเว้นช่วงให้ `import` 1.624 s และ 1.555 s แล้วครั้งถัดไปทันทีกลับมาที่ ~0.78 s · ค่าที่เว้นช่วงใกล้ median ของรอบ 2026-10-07 (1.629 s) มาก ซึ่งเข้ากับเรื่องสถานะ page cache ของไลบรารี `torch` · **แต่อธิบาย 5 ตัวอย่างติดกันที่ ~1.63 s ของรอบนั้นไม่ได้** เพราะถ้าเป็น cache ล้วน ตัวอย่างที่สองควรเร็วขึ้นแล้ว · ไม่ได้บันทึก CPU load หรืออุณหภูมิไว้ตอนวัดรอบแรก จึงเทียบกลับไปไม่ได้
-
-**ผลที่ตามมา:** ค่าเวลาในส่วนนี้ **ใช้เป็นเกณฑ์ผ่าน/ไม่ผ่านไม่ได้** และใช้ประมาณ cold start ของ container ไม่ได้ · **P03–P04 ต้องวัดเองในคอนเทนเนอร์** และถ้าจะเทียบสองค่า ให้วัดทั้งสองค่าในรอบเดียวกันเหมือนที่ทำกับ safetensors เทียบ `.bin`
-
-### ประสิทธิภาพของ evaluation
-
-351–679 วินาทีสำหรับ 14,640 แถว แบบทำนายทีละข้อความ · **ตัวเลขนี้ไม่ใช่ latency ของ API** — การวัดเป้า p95 เป็นงาน P03–P04
-
-**ตัดสินใจไม่เพิ่ม batch** เพราะ evaluation รันตอน release ไม่ใช่ต่อ request และ [P01-T02 §1](../docs/plans/P01-T02-api-contract.md#1-สถานะและขอบเขต) กำหนดว่ารับครั้งละหนึ่งข้อความ · ถ้าภายหลังต้องเพิ่ม ให้เพิ่ม **ใน `inference.py`** ไม่ใช่เขียน tokenize ซ้ำที่อื่น — มี `ponytail:` marker กำกับที่ `predict()`
+**ประสิทธิภาพของ evaluation:** 351–679 วินาทีสำหรับ 14,640 แถว แบบทำนายทีละข้อความ — **ไม่ใช่ latency ของ API** การวัดเป้า p95 เป็นงาน P03–P04
 
 ---
 
@@ -553,25 +434,9 @@ entry ที่สร้างด้วยโค้ดที่มีข้อ�
 
 ### เหตุผลที่เลือก A
 
-1. **รักษาการผูกที่ `model_version` อ้างไว้ให้เป็นจริง (เหตุผลหลัก)** — digest ครอบ code commit + environment + artifact พร้อมกัน เพราะ `predict()` ขึ้นกับโค้ดของเราไม่ใช่แค่ weights · ถ้า artifact อยู่ใน blob ที่สลับได้ตอน runtime **`model_version` จะอ้างการผูกที่ไม่มีอะไรบังคับ** — คนเปลี่ยน blob แล้ว API ยังคืน version เดิมได้
-2. **rollback ย้อนสิ่งเดียว** — R2 ต้องพิสูจน์ว่า rollback กลับรุ่นก่อนหน้าได้จริง · ย้อนสองสิ่งที่คลาดกันได้คือความเสี่ยงที่ไม่ต้องรับ
-3. **ไม่จ่ายค่าดึง artifact ซ้ำทุก cold start** — Proposal §3 เลือก scale to zero เอง ดังนั้น cold start ไม่ใช่กรณียกเว้น
-4. **artifact เป็น immutable เข้ากับ `artifact_id` ที่ content-addressed** — ของที่อยู่ใน image แก้ไม่ได้จากภายนอก
+**รักษาการผูกที่ `model_version` อ้างไว้ให้เป็นจริง (เหตุผลหลัก)** — digest ครอบ code commit + environment + artifact พร้อมกัน เพราะ `predict()` ขึ้นกับโค้ดของเราไม่ใช่แค่ weights · ถ้า artifact อยู่ใน blob ที่สลับได้ตอน runtime **`model_version` จะอ้างการผูกที่ไม่มีอะไรบังคับ** — คนเปลี่ยน blob แล้ว API ยังคืน version เดิมได้ · เหตุผลรองและข้อแลกเปลี่ยนอื่นอยู่ในตารางเทียบ A/B ด้านบนแล้ว · **failure demo ของคนที่ 3 ต้องเปลี่ยนวิธี** จากลบ blob เป็นแก้หรือลบไฟล์ใน `model/` ของคอนเทนเนอร์ที่รันอยู่ หรือ deploy image ที่ตั้งใจใส่ artifact ที่พัง
 
-### สิ่งที่แลกไป
-
-- **image โตขึ้น 477 MiB** → การ pull image ตอน cold start หนักขึ้น · **P04 ต้องวัด**
-- **เปลี่ยน model ต้อง build ใหม่** ไม่ใช่แก้ config — ช้ากว่าแต่ตรวจสอบได้มากกว่า
-- **failure demo ของคนที่ 3 ต้องเปลี่ยนวิธี** จากลบ blob เป็นแก้หรือลบไฟล์ใน `model/` ของคอนเทนเนอร์ที่รันอยู่แล้วให้ readiness fail เมื่อ restart (ใกล้เคียง disk corruption ที่เกิดได้จริง) หรือ deploy image ที่ตั้งใจใส่ artifact ที่พัง
-
-### ทางเลือกที่เลือกรองรับชุด artifact จริง
-
-| ตรวจ | ผล |
-|---|---|
-| ชุด artifact เป็น directory ของไฟล์ธรรมดา `COPY` เข้า image ได้ | 6 ไฟล์ ไม่มี symlink ไม่มี sparse file |
-| loader รับแค่ path ในเครื่อง ไม่ต้องต่อ network | ยืนยันแล้วด้วยการโหลด offline ในส่วนที่ 3 |
-| ไม่ต้องมีโค้ดติดต่อ cloud ใน core | `inference.py` ไม่มี `azure`/`boto`/`blob`/`requests` เลย |
-| ขนาดพอดีกับงบที่สมมติไว้ | 477 MiB เทียบ Basic container registry ที่ Proposal §6 สมมติไว้แล้ว |
+ทางเลือกที่เลือกรองรับชุด artifact จริง — ยืนยันแล้วในส่วนที่ 3: `COPY` เข้า image ได้ (ไฟล์ธรรมดา ไม่มี symlink), loader ไม่ต้องต่อ network (ทดสอบ offline แล้ว), core ไม่มีโค้ดติดต่อ cloud, ขนาด 477 MiB พอดีกับ Basic container registry ที่ Proposal §6 สมมติไว้
 
 ### สูตรแทนค่าให้ P04 — ไม่ใช่ตัวเลขที่เดา
 
@@ -638,7 +503,7 @@ from feedbackpulse.inference import (
 from feedbackpulse.model_files import ensure_model_files
 
 clf = SentimentClassifier.load(ensure_model_files(), model_version="<อ่านจาก registry entry>")  # ครั้งเดียวตอน process เริ่ม
-result = clf.predict("My flight was delayed.")   # ต่อ request
+result = clf.predict("My flight was delayed and nobody helped me.")   # ต่อ request
 # -> Prediction(sentiment='negative', score=0.943575, model_version='sentiment-6e7ff9fbc17c-0110c462')
 ```
 
@@ -685,5 +550,3 @@ result = clf.predict("My flight was delayed.")   # ต่อ request
 **ยังไม่มีการตรวจว่า version ที่ deploy ตรงกับ artifact ที่โหลดจริง** — `load()` รับ `model_version` ที่ส่งมาเฉย ๆ ถ้า P03 ส่งค่าผิด API จะคืนค่าผิดโดยไม่มีอะไรจับได้
 
 registry entry และ `manifest.json` มี hash ของทุกไฟล์ให้ตรวจได้ แต่ **การเรียกตรวจตอน startup เป็นของ P03** ตาม P01-T02 §4 และการตัดสินว่าอะไรนับเป็น "artifact ใช้งานไม่ได้" เป็นของ **P05** · P02 ไม่เขียนฟังก์ชันตรวจไว้ล่วงหน้าเพราะยังไม่มีผู้ใช้ และจะต้องเดา call site กับ error semantics ของเขา
-
-**สถานะงาน การตัดสินที่ล็อก ขอบเขตความรับผิดชอบ และแผนที่ task → ส่วนไหนของรายงานนี้** อยู่ใน [phase plan](../docs/plans/P02-model-pipeline.md) ไม่เล่าซ้ำที่นี่
