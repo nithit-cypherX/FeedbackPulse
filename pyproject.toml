@@ -7,12 +7,15 @@ requires-python = "==3.13.*"
 # Pinned exactly because the model output depends on these versions, so an
 # unnoticed upgrade would invalidate the recorded evaluation results (R1).
 dependencies = [
+  "fastapi>=0.115.0",
   "torch==2.14.1",
   "transformers==5.19.0",
+  "uvicorn>=0.30.0",
 ]
 
 [dependency-groups]
 dev = [
+  "httpx>=0.28.0",
   "pytest>=9.0",
   "ruff>=0.15",
 ]

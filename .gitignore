@@ -30,3 +30,6 @@ Thumbs.db
 # The version, hash, and retrieval steps are recorded in reports/ instead.
 data/
 artifacts/
+
+#MacOS
+.DS_Store

@@ -1,0 +1,15 @@
+.git
+.gitignore
+.venv
+tests
+data
+reports
+.env
+.env.*
+cloud.env
+cloud.env.*
+*.pyc
+__pycache__
+.pytest_cache
+.ruff_cache
+.DS_Store
