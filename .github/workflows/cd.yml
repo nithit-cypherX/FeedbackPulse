@@ -1,5 +1,3 @@
-# ITCS355 Lab 4 — Continuous Deployment (CD) Pipeline
-#
 # Runs only on main, only after CI is green.
 # Credentials come from Azure OIDC federation, not from stored long-lived keys.
 # Security policy:
@@ -25,13 +23,13 @@ concurrency:
   group: production-deploy
   cancel-in-progress: false
 
-env:
-  AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
-  AZURE_LOCATION: ${{ vars.AZURE_LOCATION }}
-  AZURE_CONTAINER_APP_ENV: ${{ vars.AZURE_CONTAINER_APP_ENV }}
-  AZURE_CONTAINER_APP_NAME: ${{ vars.AZURE_CONTAINER_APP_NAME }}
-  AZURE_REGISTRY_NAME: ${{ vars.AZURE_REGISTRY_NAME }}
-  AZURE_REGISTRY_SERVER: ${{ vars.AZURE_REGISTRY_SERVER }}
+env: # กำหนดค่า default value ให้กับแต่ละ variable ในกรณีที่ไม่มีการกำหนดค่าใน GitHub Secrets หรือ GitHub Actions Variables (Fallback Value)
+  AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP || 'itcs355-6688166' }}
+  AZURE_LOCATION: ${{ vars.AZURE_LOCATION || 'eastasia' }}
+  AZURE_CONTAINER_APP_ENV: ${{ vars.AZURE_CONTAINER_APP_ENV || 'itcs355-env' }}
+  AZURE_CONTAINER_APP_NAME: ${{ vars.AZURE_CONTAINER_APP_NAME || 'feedbackpulse-api' }}
+  AZURE_REGISTRY_NAME: ${{ vars.AZURE_REGISTRY_NAME || vars.ACR_NAME || 'itcs3556688166' }}
+  AZURE_REGISTRY_SERVER: ${{ vars.AZURE_REGISTRY_SERVER || 'itcs3556688166.azurecr.io' }}
 
 jobs:
   deploy:
