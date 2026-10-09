@@ -31,7 +31,7 @@ data = [
 # src/ is not installed as a package (see [tool.uv] package = false), so tests
 # and the P03 API both import it from this path. In a container, set
 # PYTHONPATH=/app/src rather than installing a wheel.
-pythonpath = ["src"]
+pythonpath = ["src", "."]
 testpaths = ["tests"]
 
 [tool.uv]
@@ -40,3 +40,16 @@ package = false
 # Local work gets every group. For the lean runtime set that P03-P04 should put
 # in the container, use: uv sync --no-default-groups
 default-groups = ["dev", "data"]
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[tool.uv.sources]
+torch = [
+  { index = "pytorch-cpu", marker = "sys_platform == 'linux'" },
+]
+
+[tool.pyrefly]
+search-path = ["src", "."]

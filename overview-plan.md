@@ -1,6 +1,6 @@
 # FeedbackPulse — Overview Plan
 
-อัปเดตสถานะ: 2026-10-08 · P01: `in_progress` · **P02: `done`** · **P03: `done`** · P04–P06: `planned`
+อัปเดตสถานะ: 2026-10-08 · P01: `in_progress` · **P02: `done`** · **P03: `done`** · **P04: `in_progress`** · P05–P06: `planned`
 
 ผมเสนอแบ่ง **FeedbackPulse เป็น 6 ส่วนหลัก** ครับ โดยใช้ skill `plan-and-track-work`: วางภาพรวมให้ครบก่อน แล้วค่อยแตกงานย่อยเฉพาะส่วนที่กำลังทำ เพื่อไม่ให้รายการงานเยอะเกินไป
 
@@ -15,7 +15,7 @@
 | **P01 — ตกลงแบบระบบและแบ่งหน้าที่** | กำหนด API ว่ารับอะไร ส่งอะไรกลับ และจัดโครงสร้างตามกติกาแยก core, configuration และ cloud adapter พร้อมแบ่งเจ้าของงาน | ทีมเข้าใจตรงกัน มีแบบระบบสำหรับ architecture review และยืนยันสถานะอนุมัติ proposal ก่อนเริ่มพัฒนา |
 | **P02 — เตรียม model และ pipeline ที่ทำซ้ำได้** | ใช้ pretrained model เวอร์ชันตายตัว จัดข้อมูล evaluation ให้มี version แล้วทำขั้นตอน evaluate → package → register พร้อม lineage | รัน workflow ซ้ำได้ และย้อนจาก model ที่ลงทะเบียนไปหา code, data, model revision และผล evaluation ได้ — ตอบ **R1** |
 | [**P03 — ทำ backend ให้ใช้งานได้ในเครื่อง**](docs/plans/P03-local-backend.md) | รับข้อความภาษาอังกฤษ คืน sentiment, score และ model version มี validation, access control, health/readiness checks และ Docker | เรียก API ใน container ได้จริง พร้อม tests สำหรับข้อมูลปกติ ข้อมูลผิด และ model ไม่พร้อม — เป็นฐานของ **R2** |
-| **P04 — Deploy และปล่อยเวอร์ชันอย่างปลอดภัย** | ทำ CI/CD ทดสอบก่อน deploy ไป Azure Container Apps วัด latency และลอง rollback พร้อมจัดการ credentials, tags และงบตั้งแต่เริ่มใช้ cloud | การเปลี่ยนแปลงที่ผิดถูก tests บล็อก เวอร์ชันที่ผ่าน deploy ได้ และ rollback กลับเวอร์ชันเดิมได้จริง — ตอบ **R2** |
+| [**P04 — Deploy และปล่อยเวอร์ชันอย่างปลอดภัย**](docs/plans/P04-deployment-and-cicd.md) | ทำ CI/CD ทดสอบก่อน deploy ไป Azure Container Apps วัด latency และลอง rollback พร้อมจัดการ credentials, tags และงบตั้งแต่เริ่มใช้ cloud | การเปลี่ยนแปลงที่ผิดถูก tests บล็อก เวอร์ชันที่ผ่าน deploy ได้ และ rollback กลับเวอร์ชันเดิมได้จริง — ตอบ **R2** |
 | **P05 — เฝ้าระวังและทดลองเหตุขัดข้อง** | ทำ dashboard และ alert แล้วจำลอง model artifact ใช้งานไม่ได้ตาม proposal ตรวจการแจ้งเตือน กู้ระบบ และเพิ่ม regression test | แสดงหลักฐานได้ครบว่า “เกิดอะไร → รู้ได้อย่างไร → กู้อย่างไร → ตรวจไม่ให้ปัญหาเดิมหลุดอีกอย่างไร” — ตอบ **R3–R4** |
 | **P06 — ตรวจงานส่งและเตรียม demo** | รวบรวม README ที่ทำตามได้, model card หนึ่งหน้า, ต้นทุนต่อ 1,000 predictions, teardown และซ้อมนำเสนอ | เพื่อนทำตามจาก fresh clone ได้ หลักฐานครบ และทีมสาธิตระบบกับ failure พร้อมตอบคำถามได้ — ตอบ **R5 และ demo 15 คะแนน** |
 
@@ -79,7 +79,15 @@
 
 ## งานถัดไป: P04 — Deploy และปล่อยเวอร์ชันอย่างปลอดภัย
 
-เจ้าของงาน: คนที่ 2 (Backend และ deployment)
-- เป้าหมาย: สร้าง infrastructure บน Azure Container Apps, ตั้งค่า CI/CD บน GitHub Actions, วัด end-to-end latency และทดสอบ rollback
-- ข้อมูลป้อนเข้าจาก P03: Image build สำเร็จ, ขนาด memory ~646 MiB, configuration template ใน `cloud.env.example`
+ดู [P04 phase plan](docs/plans/P04-deployment-and-cicd.md) · เจ้าของงาน: คนที่ 2 (Backend และ deployment)
+- **สถานะ:** `in_progress` (P04-T01: `done`, T02–T06: `planned`)
+- **เป้าหมาย:** สร้าง infrastructure บน Azure Container Apps, ตั้งค่า CI/CD บน GitHub Actions, วัด end-to-end latency และทดสอบ rollback (ตอบเกณฑ์ **R2**)
+- **ข้อมูลป้อนเข้าจาก P03:** Image build สำเร็จ (`feedbackpulse:local`), ขนาด memory ~646 MiB (ตัดสิน sizing เป็น 1.0 vCPU / 2.0 GiB), template config ใน `cloud.env.example`
+- **งานย่อยใน P04:**
+  - P04-T01: **กำหนด Infrastructure Provisioning, Cloud Adapter & Configuration** (`done` — Cloud Adapter ใน `cloudlayer/` [`adapter.py`, `azure_adapter.py`], template `cloudlayer/containerapp.template.yaml`, `Makefile`, `make portability-audit` ผ่าน 100%, tests ผ่าน 70/70 tests)
+  - P04-T02: สร้าง GitHub Actions CI Pipeline (Automated Testing with pytest & ruff)
+  - P04-T03: สร้าง Automated CD & Deployment Workflow (Image build, tag commit SHA, push registry, deploy ACA)
+  - P04-T04: Smoke Test บน Cloud และวัด Latency Benchmark (p95 <= 3s @ concurrency=2)
+  - P04-T05: ทดสอบและพิสูจน์กระบวนการ Rollback (traffic shift 100% กลับ revision เดิม)
+  - P04-T06: สร้าง Teardown Script และสรุปหลักฐาน `reports/P04-evidence.md`
 

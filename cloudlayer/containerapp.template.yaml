@@ -1,0 +1,66 @@
+# Azure Container Apps Configuration for FeedbackPulse (IaC - Infrastructure as Code file)
+# Schema reference: https://learn.microsoft.com/azure/container-apps/azure-resource-manager-api-spec
+# NOTE: Zero plaintext secrets are stored in this file.
+# Values marked with ${VAR_NAME} are injected dynamically at provisioning time.
+
+properties:
+  managedEnvironmentId: "${MANAGED_ENV_ID}"
+  configuration:
+    activeRevisionsMode: Multiple
+    ingress:
+      external: true
+      targetPort: 8000
+      transport: auto
+      allowInsecure: false
+    secrets:
+      - name: service-token
+        value: "${SERVICE_TOKEN}"
+      - name: acr-password
+        value: "${REGISTRY_PASSWORD}"
+    registries:
+      - server: "${REGISTRY_SERVER}"
+        username: "${REGISTRY_USERNAME}"
+        passwordSecretRef: acr-password
+  template:
+    containers:
+      - name: feedbackpulse-api
+        image: "${IMAGE_TAG}"
+        resources:
+          cpu: 1.0
+          memory: 2.0Gi
+        env:
+          - name: SERVICE_TOKEN
+            secretRef: service-token
+          - name: HOST
+            value: "0.0.0.0"
+          - name: PORT
+            value: "8000"
+          - name: MODEL_DIR
+            value: "/app/artifacts/sentiment-6e7ff9fbc17c/model"
+          - name: MODEL_VERSION
+            value: "sentiment-6e7ff9fbc17c-0110c462"
+        probes:
+          - type: Liveness
+            httpGet:
+              path: "/health"
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 15
+            failureThreshold: 3
+            timeoutSeconds: 3
+          - type: Readiness
+            httpGet:
+              path: "/ready"
+              port: 8000
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            failureThreshold: 3
+            timeoutSeconds: 5
+    scale:
+      minReplicas: 0
+      maxReplicas: 3
+      rules:
+        - name: http-concurrency-rule
+          http:
+            metadata:
+              concurrentRequests: "10"

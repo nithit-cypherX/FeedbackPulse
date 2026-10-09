@@ -5,6 +5,9 @@
 cloud.env
 cloud.env.*
 !cloud.env.example
+.cloud.env
+.cloud.env.*
+!.cloud.env.example
 .azure/
 .secrets/
 *.pem

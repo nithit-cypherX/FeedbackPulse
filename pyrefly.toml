@@ -1,0 +1,2 @@
+# Pyrefly configuration for FeedbackPulse
+search-path = ["src", "."]
