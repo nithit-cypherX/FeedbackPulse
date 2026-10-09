@@ -1,0 +1,155 @@
+# ITCS355 Lab 4 — Continuous Deployment (CD) Pipeline
+#
+# Runs only on main, only after CI is green.
+# Credentials come from Azure OIDC federation, not from stored long-lived keys.
+# Security policy:
+# - No long-lived credentials stored in repository: uses Azure OIDC (id-token: write)
+# - Container images tagged strictly with Git commit SHA (immutable auditability)
+# - Secrets injected only at deployment runtime via Azure Container Apps secrets
+
+name: CD
+
+on: # -- Trigger condition / Event trigger
+  workflow_run:
+    workflows: [CI] # CD จะทำงานเมื่อ CI บน branch main completed
+    types: [completed]
+    branches: [main]
+  workflow_dispatch: # รองรับการสั่ง deploy แบบ manual ผ่าน GitHub Actions UI
+
+permissions:
+  contents: read
+  id-token: write # Required for Azure OIDC Federated Credentials
+
+# Prevent concurrent deployment collisions (Prevent race condition from multiple deploys at the same time)
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
+env:
+  AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+  AZURE_LOCATION: ${{ vars.AZURE_LOCATION }}
+  AZURE_CONTAINER_APP_ENV: ${{ vars.AZURE_CONTAINER_APP_ENV }}
+  AZURE_CONTAINER_APP_NAME: ${{ vars.AZURE_CONTAINER_APP_NAME }}
+  AZURE_REGISTRY_NAME: ${{ vars.AZURE_REGISTRY_NAME }}
+  AZURE_REGISTRY_SERVER: ${{ vars.AZURE_REGISTRY_SERVER }}
+
+jobs:
+  deploy:
+    # รันเฉพาะเมื่อ CI ผ่านสำเร็จ (success) หรือเมื่อกดรันแบบ manual
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
+    name: Build, Push & Deploy to Azure Container Apps
+    runs-on: ubuntu-latest
+    environment: production # เพื่อให้ GitHub บันทึก Deployment Tracking, แสดง URL ของ Container App และสถานะในหน้าหลักของ Repository
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install uv Package Manager
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+
+      - name: Set up Python 3.13
+        run: uv python install 3.13
+
+      - name: Install dependencies from lockfile
+        run: uv sync --frozen --all-groups
+
+      # --- Azure Login via OIDC (No long-lived keys) -------------------------
+      - name: Log in to Azure (OIDC)
+        if: "${{ secrets.AZURE_CLIENT_ID != '' }}"
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Log in to Azure (Service Principal Fallback)
+        if: "${{ secrets.AZURE_CLIENT_ID == '' && secrets.AZURE_CREDENTIALS != '' }}"
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Log in to Azure Container Registry (ACR)
+        run: az acr login --name "$AZURE_REGISTRY_NAME"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # Images are tagged with the commit SHA, never `latest`. A `latest` tag makes it
+      # impossible to say which code is serving, which is the question you will be asked
+      # during an incident.
+      - name: Build and push container image
+        run: |
+          DEPLOY_SHA="${{ github.event.workflow_run.head_sha || github.sha }}"
+          IMAGE_TAG="$AZURE_REGISTRY_SERVER/feedbackpulse:${DEPLOY_SHA}"
+          echo "Building and pushing container image: $IMAGE_TAG"
+          docker buildx build \
+            --platform linux/amd64 \
+            -t "$IMAGE_TAG" \
+            --push .
+
+      - name: Render Container App configuration
+        run: |
+          DEPLOY_SHA="${{ github.event.workflow_run.head_sha || github.sha }}"
+          MANAGED_ENV_ID=$(az containerapp env show -n "$AZURE_CONTAINER_APP_ENV" -g "$AZURE_RESOURCE_GROUP" --query id -o tsv)
+          REG_PASS=$(az acr credential show -n "$AZURE_REGISTRY_NAME" --query "passwords[0].value" -o tsv)
+          IMAGE_TAG="$AZURE_REGISTRY_SERVER/feedbackpulse:${DEPLOY_SHA}"
+
+          MANAGED_ENV_ID="$MANAGED_ENV_ID" \
+          REGISTRY_PASSWORD="$REG_PASS" \
+          REGISTRY_SERVER="$AZURE_REGISTRY_SERVER" \
+          REGISTRY_USERNAME="$AZURE_REGISTRY_NAME" \
+          IMAGE_TAG="$IMAGE_TAG" \
+          SERVICE_TOKEN="${{ secrets.SERVICE_TOKEN || 'test-service-token-secret-12345' }}" \
+          uv run python cloudlayer/render_config.py --output rendered_containerapp.yaml
+
+      - name: Deploy revision to Azure Container Apps
+        run: |
+          if az containerapp show -n "$AZURE_CONTAINER_APP_NAME" -g "$AZURE_RESOURCE_GROUP" >/dev/null 2>&1; then
+            echo "Updating existing Container App '$AZURE_CONTAINER_APP_NAME'..."
+            az containerapp update -n "$AZURE_CONTAINER_APP_NAME" -g "$AZURE_RESOURCE_GROUP" --yaml rendered_containerapp.yaml
+          else
+            echo "Creating new Container App '$AZURE_CONTAINER_APP_NAME'..."
+            az containerapp create -n "$AZURE_CONTAINER_APP_NAME" -g "$AZURE_RESOURCE_GROUP" --environment "$AZURE_CONTAINER_APP_ENV" --yaml rendered_containerapp.yaml
+          fi
+
+      # --- Smoke Test: "A deploy that is not smoke-tested is a deploy you have not verified." ---
+      - name: Live Smoke Test with Three Known Payloads
+        run: |
+          FQDN=$(az containerapp show -n "$AZURE_CONTAINER_APP_NAME" -g "$AZURE_RESOURCE_GROUP" --query "properties.configuration.ingress.fqdn" -o tsv)
+          TOKEN="${{ secrets.SERVICE_TOKEN || 'test-service-token-secret-12345' }}"
+          echo "Verifying live endpoint at: https://$FQDN"
+
+          echo "Polling readiness probe..."
+          for i in $(seq 1 30); do
+            curl -sf "https://$FQDN/ready" && break || sleep 5
+          done
+
+          echo "Smoke Test 1 (Positive payload)..."
+          curl -sf -X POST "https://$FQDN/predict" \
+            -H "Authorization: Bearer $TOKEN" \
+            -H "Content-Type: application/json" \
+            -d '{"text": "Excellent service! The response was rapid and highly effective."}' \
+            | tee /dev/stderr | grep -q sentiment
+
+          echo "Smoke Test 2 (Negative payload)..."
+          curl -sf -X POST "https://$FQDN/predict" \
+            -H "Authorization: Bearer $TOKEN" \
+            -H "Content-Type: application/json" \
+            -d '{"text": "The platform completely crashed during checkout and lost my order."}' \
+            | tee /dev/stderr | grep -q sentiment
+
+          echo "Smoke Test 3 (Neutral/boundary payload)..."
+          curl -sf -X POST "https://$FQDN/predict" \
+            -H "Authorization: Bearer $TOKEN" \
+            -H "Content-Type: application/json" \
+            -d '{"text": "The delivery package arrived on Tuesday afternoon as scheduled."}' \
+            | tee /dev/stderr | grep -q sentiment
+
+          echo "==> All 3 smoke tests passed on live deployment."
+
+      - name: Clean up temporary rendered YAML # ลบไฟล์ config ที่ถูกสร้างขึ้นชั่วคราว (rendered_containerapp.yaml) ทันทีหลัง deploy เสร็จสิ้น
+        if: always()
+        run: rm -f rendered_containerapp.yaml 
