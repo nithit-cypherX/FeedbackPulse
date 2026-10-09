@@ -151,7 +151,8 @@ def create_app(
     @app.get("/ready")
     async def ready() -> Response:
         """Readiness probe: verifies the model is loaded and ready."""
-        if not state.is_ready:
+        classifier = state.classifier
+        if classifier is None:
             return create_error_response(
                 status.HTTP_503_SERVICE_UNAVAILABLE,
                 "MODEL_NOT_READY",
@@ -161,7 +162,7 @@ def create_app(
             status_code=status.HTTP_200_OK,
             content={
                 "status": "ready",
-                "model_version": state.classifier.model_version,
+                "model_version": classifier.model_version,
             },
         )
 
@@ -182,7 +183,8 @@ def create_app(
             )
 
         # 2. Check model readiness
-        if not state.is_ready:
+        classifier = state.classifier
+        if classifier is None:
             return create_error_response(
                 status.HTTP_503_SERVICE_UNAVAILABLE,
                 "MODEL_NOT_READY",
@@ -224,7 +226,7 @@ def create_app(
 
         # 5. Classify text using shared inference module
         try:
-            result = state.classifier.predict(raw_text)
+            result = classifier.predict(raw_text)
         except TextTooLong as exc:
             return create_error_response(
                 status.HTTP_422_UNPROCESSABLE_ENTITY,
