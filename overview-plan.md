@@ -80,12 +80,12 @@
 ## งานถัดไป: P04 — Deploy และปล่อยเวอร์ชันอย่างปลอดภัย
 
 ดู [P04 phase plan](docs/plans/P04-deployment-and-cicd.md) · เจ้าของงาน: คนที่ 2 (Backend และ deployment)
-- **สถานะ:** `in_progress` (P04-T01: `done`, T02–T06: `planned`)
+- **สถานะ:** `in_progress` (P04-T01, P04-T02: `done`, T03–T06: `planned`)
 - **เป้าหมาย:** สร้าง infrastructure บน Azure Container Apps, ตั้งค่า CI/CD บน GitHub Actions, วัด end-to-end latency และทดสอบ rollback (ตอบเกณฑ์ **R2**)
 - **ข้อมูลป้อนเข้าจาก P03:** Image build สำเร็จ (`feedbackpulse:local`), ขนาด memory ~646 MiB (ตัดสิน sizing เป็น 1.0 vCPU / 2.0 GiB), template config ใน `cloud.env.example`
 - **งานย่อยใน P04:**
   - P04-T01: **กำหนด Infrastructure Provisioning, Cloud Adapter & Configuration** (`done` — Cloud Adapter ใน `cloudlayer/` [`adapter.py`, `azure_adapter.py`], template `cloudlayer/containerapp.template.yaml`, `Makefile`, `make portability-audit` ผ่าน 100%, tests ผ่าน 70/70 tests)
-  - P04-T02: สร้าง GitHub Actions CI Pipeline (Automated Testing with pytest & ruff)
+  - P04-T02: **สร้าง GitHub Actions CI Pipeline** (`done` — `.github/workflows/ci.yml` โครงสร้าง Two-stage: Job `test` [Astral `uv`, `ruff check`, portability audit, template validation, 70/70 tests] และ Job `build` [Docker buildx `--platform linux/amd64`, commit SHA tagging, container smoke test `/ready` & `/predict`])
   - P04-T03: สร้าง Automated CD & Deployment Workflow (Image build, tag commit SHA, push registry, deploy ACA)
   - P04-T04: Smoke Test บน Cloud และวัด Latency Benchmark (p95 <= 3s @ concurrency=2)
   - P04-T05: ทดสอบและพิสูจน์กระบวนการ Rollback (traffic shift 100% กลับ revision เดิม)

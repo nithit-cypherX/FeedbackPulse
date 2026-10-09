@@ -1,0 +1,95 @@
+name: CI
+
+on: # -- Event Triggers
+  push: # ทำงานอัตโนมัติเมื่อมี push ไปยัง branch ใดๆ (รวมถึง main และ feature branch)
+    branches: 
+      - main
+      - "**"
+  pull_request: # ทำงานอัตโนมัติเมื่อมี pull_request เข้าหา main
+    branches:
+      - main
+  workflow_dispatch: # รองรับการสั่งรันแบบ manual ผ่าน workflow_dispatch
+
+permissions: # กำหนดสิทธิ์ (Permissions)
+  contents: read
+
+concurrency: # Cancel in-progress runs on the same branch when new commits are pushed
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# -- Jobs
+jobs:
+  # Job 1: Lint, Portability & Test Suite (Lint, Portability & Test Suite)
+  test:
+    name: Lint, Portability & Test Suite
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository # ดึงโค้ดจาก repository
+        uses: actions/checkout@v4
+
+      - name: Install uv Package Manager # ติดตั้ง uv package manager
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true # เปิดใช้งาน cache
+          cache-dependency-glob: "uv.lock"
+
+      - name: Set up Python 3.13 # ตั้งค่า Python 3.13
+        run: uv python install 3.13
+
+      - name: Install dependencies from lockfile # ติดตั้ง dependencies ทั้งหมดจาก lockfile
+        run: uv sync --frozen --all-groups
+
+      - name: Lint with Ruff # ตรวจสอบ Code Style และ Syntax ทั้งหมด
+        run: uv run ruff check
+
+      - name: Automated Portability Audit (AST check) # ตรวจจับ AST ป้องกันไม่ให้โค้ดใน src/ import cloud SDK ใดๆ
+        run: uv run pytest tests/test_portability.py -v
+
+      - name: Validate Container App Template # ตรวจสอบว่า Container App template ไม่มีการ hardcode secrets หรือ credential
+        run: uv run python cloudlayer/render_config.py --validate-only
+
+      - name: Execute Full Test Suite (Pytest) # รันชุดทดสอบทั้งหมด 70 รายการ,ครอบคลุมทั้ง business logic และ cloud adapter
+        run: uv run pytest -v
+
+  # Job 2: Container Build & Integration Smoke Test (Container Build & Integration Smoke Test)
+  build:
+    name: Container Build & Integration Smoke Test
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository # ดึงโค้ดจาก repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx # ตั้งค่า Docker Buildx สำหรับ build multi-platform image
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build container image # Build และ tag image ด้วย commit SHA (immutable tag) เพื่อให้สามารถ rollback ได้
+        run: |
+          docker buildx build \
+            --platform linux/amd64 \
+            -t feedbackpulse:${{ github.sha }} \
+            --load .
+
+      - name: Container integration smoke test # ทดสอบการทำงานร่วมกันของ container, ตรวจสอบว่า service พร้อมรับ request จริง
+        run: |
+          # 1. Run containerized service in background with test token
+          docker run -d --rm --name svc -p 8000:8000 \
+            -e SERVICE_TOKEN=ci-test-token \
+            feedbackpulse:${{ github.sha }}
+
+          # 2. Poll readiness probe until healthy (up to 60s)
+          echo "Waiting for service readiness..."
+          for i in $(seq 1 30); do
+            curl -sf http://localhost:8000/ready && break || sleep 2
+          done
+
+          # 3. Test prediction contract with Bearer token authentication
+          echo "Verifying prediction API contract..."
+          curl -sf -X POST http://localhost:8000/predict \
+            -H 'Authorization: Bearer ci-test-token' \
+            -H 'Content-Type: application/json' \
+            -d '{"text": "FeedbackPulse CI smoke test positive feedback!"}' \
+            | tee /dev/stderr | grep -q sentiment
+
+          # 4. Clean shutdown
+          docker stop svc
