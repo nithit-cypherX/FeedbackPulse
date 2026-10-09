@@ -1,3 +1,4 @@
+#cheap checks first, so a schema mistake fails in 30 seconds rather than after a build.
 name: CI
 
 on: # -- Event Triggers
