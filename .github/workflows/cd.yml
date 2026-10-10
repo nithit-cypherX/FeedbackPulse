@@ -9,9 +9,11 @@ name: CD
 
 on: # -- Trigger condition / Event trigger
   workflow_run:
-    workflows: [CI] # CD จะทำงานเมื่อ CI บน branch main completed
+    workflows: [CI] # CD จะทำงานเมื่อ CI บน default branch completed
     types: [completed]
-    branches: [main]
+    branches:
+      - "codex/bootstrap"
+      - main
   workflow_dispatch: # รองรับการสั่ง deploy แบบ manual ผ่าน GitHub Actions UI
 
 permissions:
