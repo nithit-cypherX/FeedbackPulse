@@ -1,6 +1,6 @@
 # P04 — Deploy และปล่อยเวอร์ชันอย่างปลอดภัย (Deployment & CI/CD)
 
-- **สถานะ:** `planned`
+- **สถานะ:** `done`
 - **เจ้าของ:** คนที่ 2 — Backend และ deployment
 - **แผนหลัก:** [Overview](../../overview-plan.md) · **ขอบเขต:** [Proposal](../../PROPOSAL.md) · **เกณฑ์ที่ตอบสนอง:** **R2 (Deployment & CI/CD)**
 - **ข้อตกลงที่ต้องทำตาม:** [P01-T02 API contract](P01-T02-api-contract.md) · [P01-T03 System structure](P01-T03-system-structure.md) · [P02 Model pipeline](P02-model-pipeline.md) · [P03 Local backend](P03-local-backend.md)
@@ -52,7 +52,7 @@
 | **P04-T03** | **สร้าง Automated CD & Deployment Workflow** | `done` | มี workflow `.github/workflows/cd.yml` ที่ build image จาก `Dockerfile`, tag ด้วย commit SHA, push ไปยัง ACR ผ่าน Azure OIDC, render template, deploy revision ใหม่ไป Azure Container Apps และ smoke test live endpoint | GitHub Actions deploy สำเร็จ และ Azure Container Apps สร้าง revision ใหม่พร้อม traffic 100% |
 | **P04-T04** | **Smoke Test บน Cloud และวัด Latency Benchmark** | `done` | ยิงทดสอบ public HTTPS URL ของ Container App ครบทุกเคส (200, 401, 400, 422 เพดาน 510 tokens) ผ่าน 12/12 เคส และรัน k6 load test ที่ 2 concurrent requests ได้ p95 latency = 0.213s (เป้าหมาย <= 3.0s, ผ่านเกณฑ์ SLA Proposal §3, Error rate 0.0%) | รัน `scripts/cloud_check.py` (`make smoke-test`) บันทึก `reports/P04-cloud-check.json` และรัน `loadtest/k6.js` (`make load-test`) ผ่าน k6 thresholds p95<3000ms ครบ 100% |
 | **P04-T05** | **ทดสอบและพิสูจน์กระบวนการ Rollback** | `done` | สามารถสลับ traffic กลับไป revision ก่อนหน้าที่ทำงานปกติได้อย่างสมบูรณ์ โดยไม่ต้อง build image ใหม่ ผ่าน Azure Container Apps Native Revision Routing (`make rollback REV=...` และ `make verify-rollback`) | รัน `scripts/verify_rollback.py` (`make verify-rollback`), ยืนยัน traffic weight 100% กลับไปที่ baseline revision (`feedbackpulse-api--2zaws5o`) ใน 17.52 วินาที, ยิงทดสอบ `/health`, `/ready`, `/predict` ผ่านฉลุย 200 OK และบันทึกหลักฐานลงใน `reports/P04-rollback-evidence.json` |
-| **P04-T06** | **สร้าง Teardown Script และสรุปหลักฐาน P04-evidence** | `planned` | มีคำสั่ง `teardown.sh` ที่ลบ resource บน cloud ครบถ้วน พร้อมเอกสาร `reports/P04-evidence.md` รวบรวมผล CI, deployment run, latency numbers, และ rollback evidence | ตรวจสอบเอกสารหลักฐาน ลิงก์ CI run, output การทดสอบ และทดสอบคำสั่ง teardown ใน dry-run / review mode |
+| **P04-T06** | **สร้าง Teardown Script และสรุปหลักฐาน P04-evidence** | `done` | มีคำสั่ง `teardown.sh` / `make teardown` ที่ลบ resource บน cloud ครบถ้วน พร้อมโหมด dry-run และเอกสาร `reports/P04-evidence.md` รวบรวมผล CI, deployment run, latency numbers, rollback evidence และ teardown verification | ตรวจสอบเอกสารหลักฐาน ลิงก์ CI run, output การทดสอบ และทดสอบคำสั่ง teardown ใน dry-run / review mode ผ่านฉลุย |
 
 ---
 
@@ -80,10 +80,11 @@
 ## 4. เกณฑ์การผ่านเฟส P04 (Phase Acceptance Checklist — ตอบ R2)
 
 - [x] **CI Pipeline ทำงานสมบูรณ์:** GitHub Actions รัน `ruff check` และ `pytest` ผ่านครบ 100% (70/70 tests) บน pull request/push
-- [ ] **CI Blocker:** การเปลี่ยนแปลงที่มี bug หรือ test fail ต้องถูกบล็อกไม่ให้ deploy โดยเด็ดขาด
+- [x] **CI Blocker:** การเปลี่ยนแปลงที่มี bug หรือ test fail ต้องถูกบล็อกไม่ให้ deploy โดยเด็ดขาด
 - [x] **CD Deployment สำเร็จ:** Build image แบบ non-root และ deploy ขึ้น Azure Container Apps สำเร็จ
 - [x] **Cloud Smoke Test ผ่านครบถ้วน:** ยิง public HTTPS URL แล้วตอบสนองตาม API contract (200, 401, 400, 422 boundary 510 tokens, 503)
 - [x] **Latency ตามเป้า:** End-to-end p95 latency <= 3.0s ที่ 2 concurrent requests เมื่อโมเดลโหลดแล้ว (พร้อมบันทึก cold start แยกต่างหาก)
 - [x] **Rollback ผ่านการทดสอบจริง:** มีหลักฐานยืนยันว่าสลับ traffic กลับไป revision เดิมได้สำเร็จ (`make verify-rollback`)
-- [ ] **Teardown พร้อมใช้งาน:** มี script ลบ resource ทั้งหมดบน Azure อย่างหมดจด
-- [ ] **รวบรวมหลักฐานครบถ้วน:** บันทึกผลทั้งหมดใน `reports/P04-evidence.md` และอัปเดต `overview-plan.md`
+- [x] **Teardown พร้อมใช้งาน:** มี script ลบ resource ทั้งหมดบน Azure อย่างหมดจด (`scripts/teardown.sh` / `make teardown`)
+- [x] **รวบรวมหลักฐานครบถ้วน:** บันทึกผลทั้งหมดใน `reports/P04-evidence.md` และอัปเดต `overview-plan.md`
+

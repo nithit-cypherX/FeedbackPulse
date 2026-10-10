@@ -1,6 +1,6 @@
 # FeedbackPulse — Overview Plan
 
-อัปเดตสถานะ: 2026-10-08 · P01: `in_progress` · **P02: `done`** · **P03: `done`** · **P04: `in_progress`** · P05–P06: `planned`
+อัปเดตสถานะ: 2026-10-10 · P01: `in_progress` · **P02: `done`** · **P03: `done`** · **P04: `done`** · P05–P06: `planned`
 
 ผมเสนอแบ่ง **FeedbackPulse เป็น 6 ส่วนหลัก** ครับ โดยใช้ skill `plan-and-track-work`: วางภาพรวมให้ครบก่อน แล้วค่อยแตกงานย่อยเฉพาะส่วนที่กำลังทำ เพื่อไม่ให้รายการงานเยอะเกินไป
 
@@ -77,17 +77,26 @@
 - Memory usage ใน container: **645.8 MiB** (ใช้ตัดสิน sizing ใน P04)
 - Simulated failure: ตรวจสอบความพร้อม `/health` (200) แยกจาก `/ready` (503) สำเร็จ
 
-## งานถัดไป: P04 — Deploy และปล่อยเวอร์ชันอย่างปลอดภัย
+## P04 เสร็จแล้ว — Deploy และปล่อยเวอร์ชันอย่างปลอดภัย
 
-ดู [P04 phase plan](docs/plans/P04-deployment-and-cicd.md) · เจ้าของงาน: คนที่ 2 (Backend และ deployment)
-- **สถานะ:** `in_progress` (P04-T01, P04-T02, P04-T03, P04-T04, P04-T05: `done`, T06: `planned`)
-- **เป้าหมาย:** สร้าง infrastructure บน Azure Container Apps, ตั้งค่า CI/CD บน GitHub Actions, วัด end-to-end latency และทดสอบ rollback (ตอบเกณฑ์ **R2**)
-- **ข้อมูลป้อนเข้าจาก P03:** Image build สำเร็จ (`feedbackpulse:local`), ขนาด memory ~646 MiB (ตัดสิน sizing เป็น 1.0 vCPU / 2.0 GiB), template config ใน `cloud.env.example`
+ดู [P04 phase plan](docs/plans/P04-deployment-and-cicd.md) · [หลักฐานการทดสอบและวัดค่า](reports/P04-evidence.md) · เจ้าของงาน: คนที่ 2 (Backend และ deployment)
+- **สถานะ:** `done` (ครบทั้ง 6 tasks T01–T06 — ตอบเกณฑ์ **R2** สมบูรณ์ 100%)
+- **Public Cloud URL:** `https://feedbackpulse-api.redground-de34b2df.eastasia.azurecontainerapps.io`
+- **Infrastructure:** Azure Container Apps (East Asia, Consumption Plan, 1.0 vCPU / 2.0 GiB, scale-to-zero)
+- **CI/CD Pipelines:** GitHub Actions Two-stage CI (70/70 tests, Docker buildx) และ CD (Azure OIDC passwordless, zero downtime revision rollout)
+- **Contract & Benchmark:** 12/12 API contract tests ผ่านฉลุย, k6 concurrency p95 latency = **0.213s** (เป้าหมาย $\le$ 3.0s, Error rate 0.0%)
+- **Rollback:** Zero-downtime Blue/Green traffic shift 100% กลับ baseline revision ใน **15.00s** บันทึกใน `reports/P04-rollback-evidence.json`
+- **Teardown & Cost:** มีคำสั่ง `scripts/teardown.sh` / `make teardown` พร้อมโหมด `--dry-run` ป้องกันค่าใช้จ่ายค้างคา
 - **งานย่อยใน P04:**
   - P04-T01: **กำหนด Infrastructure Provisioning, Cloud Adapter & Configuration** (`done` — Cloud Adapter ใน `cloudlayer/` [`adapter.py`, `azure_adapter.py`], template `cloudlayer/containerapp.template.yaml`, `Makefile`, `make portability-audit` ผ่าน 100%, tests ผ่าน 70/70 tests)
   - P04-T02: **สร้าง GitHub Actions CI Pipeline** (`done` — `.github/workflows/ci.yml` โครงสร้าง Two-stage: Job `test` [Astral `uv`, `ruff check`, portability audit, template validation, 70/70 tests] และ Job `build` [Docker buildx `--platform linux/amd64`, commit SHA tagging, container smoke test `/ready` & `/predict`])
   - P04-T03: **สร้าง Automated CD & Deployment Workflow** (`done` — `.github/workflows/cd.yml` รันบน main branch, Azure OIDC `id-token: write` ไม่ใช้ long-lived keys, build & push image ด้วย commit SHA tag, render template, deploy Azure Container Apps และ smoke test ตรวจสอบ live endpoint)
   - P04-T04: **Smoke Test บน Cloud และวัด Latency Benchmark** (`done` — รัน `scripts/cloud_check.py` ผ่าน 12/12 contract tests และรัน `loadtest/k6.js` วัด p95 latency ที่ 2 concurrent requests ได้ 0.213s [เป้าหมาย <= 3.0s, Error rate 0.0%])
-  - P04-T05: **ทดสอบและพิสูจน์กระบวนการ Rollback** (`done` — สร้าง `scripts/verify_rollback.py` และ `make verify-rollback`, พิสูจน์การสลับ traffic 100% กลับ baseline revision `feedbackpulse-api--2zaws5o` ใน 17.52s โดยไม่ต้อง rebuild image, ยิงตรวจ `/health`, `/ready`, `/predict` 200 OK และบันทึก `reports/P04-rollback-evidence.json`)
-  - P04-T06: สร้าง Teardown Script และสรุปหลักฐาน `reports/P04-evidence.md`
+  - P04-T05: **ทดสอบและพิสูจน์กระบวนการ Rollback** (`done` — สร้าง `scripts/verify_rollback.py` และ `make verify-rollback`, พิสูจน์การสลับ traffic 100% กลับ baseline revision `feedbackpulse-api--2zaws5o` ใน 15.00s โดยไม่ต้อง rebuild image, ยิงตรวจ `/health`, `/ready`, `/predict` 200 OK และบันทึก `reports/P04-rollback-evidence.json`)
+  - P04-T06: **สร้าง Teardown Script และสรุปหลักฐาน P04-evidence** (`done` — สร้าง `scripts/teardown.sh` / `make teardown` พร้อมโหมด `--dry-run` และเขียนรายงานสรุปหลักฐานครบถ้วนใน `reports/P04-evidence.md`)
+
+## งานถัดไป: P05 — เฝ้าระวังและทดลองเหตุขัดข้อง (Monitoring & Reliability)
+
+เจ้าของงาน: คนที่ 3 (Monitoring และ reliability)
+- **เป้าหมาย:** ทำ dashboard และ alert แล้วจำลอง model failure ตาม proposal ตรวจการแจ้งเตือน กู้ระบบ และเพิ่ม regression test (ตอบเกณฑ์ **R3–R4**)
 

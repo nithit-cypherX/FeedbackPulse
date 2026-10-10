@@ -11,7 +11,7 @@ export PATH := $(HOME)/.local/bin:$(HOME)/.cargo/bin:/usr/local/bin:$(PATH)
 # Resolve uv binary location automatically
 UV ?= $(shell if [ -x "$$HOME/.local/bin/uv" ]; then echo "$$HOME/.local/bin/uv"; elif [ -x "$$HOME/.cargo/bin/uv" ]; then echo "$$HOME/.cargo/bin/uv"; else which uv 2>/dev/null || echo "uv"; fi)
 
-.PHONY: help test lint portability-audit validate-config docker-build docker-push dry-run deploy status change-traffic verify-rollback
+.PHONY: help test lint portability-audit validate-config docker-build docker-push dry-run deploy status change-traffic verify-rollback teardown teardown-dry-run
 
 help:
 	@echo "========================================================================"
@@ -35,6 +35,8 @@ help:
 	@echo "  make deploy             : Deploy or update Azure Container App from YAML"
 	@echo "  make status             : Check deployed Container App FQDN and revisions"
 	@echo "  make change-traffic REV=...   : Shift 100% traffic back to specified revision"
+	@echo "  make teardown           : Interactive teardown of cloud resources"
+	@echo "  make teardown-dry-run   : Preview teardown actions without deleting"
 	@echo "========================================================================"
 
 # --- Testing & Quality Assurance ---
@@ -118,3 +120,9 @@ change-traffic:
 
 verify-rollback:
 	PYTHONPATH=src $(UV) run python scripts/verify_rollback.py $(if $(SIMULATE),--simulate-new-first,) $(ARGS)
+
+teardown:
+	@./scripts/teardown.sh $(ARGS)
+
+teardown-dry-run:
+	@./scripts/teardown.sh --dry-run

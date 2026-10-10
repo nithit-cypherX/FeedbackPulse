@@ -10,6 +10,7 @@
 |---|---|---|---|
 | [`cloud_check.py`](cloud_check.py) | ตรวจสอบ API Contract 12 รายการบน Public URL, วัด Cold-Start Time และ Error Rate แยกต่างหาก | `make smoke-test` | `reports/P04-cloud-check.json` |
 | [`verify_rollback.py`](verify_rollback.py) | ทดสอบและพิสูจน์กระบวนการ Rollback (สลับ Traffic 100% กลับเวอร์ชันเดิมแบบ Zero-Downtime) | `make verify-rollback [SIMULATE=1]` | `reports/P04-rollback-evidence.json` |
+| [`teardown.sh`](teardown.sh) | ลบ Cloud Resources ทั้งหมดบน Azure อย่างปลอดภัย พร้อม Dry-Run และ Confirmation Guard | `make teardown` หรือ `make teardown-dry-run` | Console / Dry-run logs |
 
 ---
 
@@ -139,3 +140,41 @@ make status
   "status": "PASSED"
 }
 ```
+
+---
+
+## 4. คำสั่งทำความสะอาด Cloud Resources (Teardown Script — P04-T06)
+
+สคริปต์ [`teardown.sh`](teardown.sh) ใช้สำหรับทำความสะอาด Container App บน Azure เพื่อควบคุมงบประมาณค่าใช้จ่ายของ Azure for Students Subscription โดยมีนโยบายความปลอดภัย (**Safeguard Policy**) ดังนี้:
+
+> [!NOTE]
+> **ระบบตั้งค่าเริ่มต้นเป็นโหมดปลอดภัย (`--app-only`):**
+> คำสั่ง `make teardown` จะทำการลบ **เฉพาะตัว Container App (`feedbackpulse-api`) และ Revisions ทั้งหมดเท่านั้น** โดยจะยังคง **Azure Container Registry (ACR)** และ **Container Apps Environment** ไว้อย่างปลอดภัย
+> 
+> **ข้อดี:** หากต้องการ Deploy ใหม่อีกครั้ง สามารถทำได้ง่ายๆ เพียงแค่ `git push` ขึ้น branch `main` ระบบ GitHub Actions CD จะตรวจพบและทำการสร้าง Container App ตัวใหม่ให้โดยอัตโนมัติทันที
+> 
+> *(ส่วนคำสั่งลบ ACR และ Environment ถูก Comment ไว้ใน `scripts/teardown.sh` เพื่อป้องกันการเผลอลบ หากจบวิชาแล้วต้องการลบทุกอย่างถาวร สามารถเปิด Uncomment ได้ตามคำแนะนำในสคริปต์)*
+
+### 4.1 ทดสอบจำลองการลบ (Dry-Run Preview — ปลอดภัย ไม่มีการลบจริง)
+```bash
+make teardown-dry-run
+# หรือ
+./scripts/teardown.sh --dry-run
+```
+*ระบบจะจำลองและแสดงรายชื่อคำสั่ง CLI ที่จะถูกรันให้ตรวจสอบก่อน โดยไม่มีการแก้ไขหรือลบ Cloud Resource ใดๆ*
+
+### 4.2 สั่งลบแบบ Interactive (มีถามยืนยันก่อนลบ)
+```bash
+make teardown
+# หรือ
+./scripts/teardown.sh
+```
+*ระบบจะแสดงรายการ Resource และหยุดรอให้พิมพ์ `yes` เพื่อยืนยันก่อนเริ่มลบ*
+
+### 4.3 ตัวเลือกเสริม (Advanced Flags)
+- **ลบแบบอัตโนมัติไม่ต้องยืนยัน (สำหรับ CI/CD Automation):**
+  ```bash
+  ./scripts/teardown.sh --yes
+  ```
+
+
