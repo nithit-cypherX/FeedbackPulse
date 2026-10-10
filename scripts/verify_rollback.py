@@ -174,16 +174,18 @@ def main() -> int:
         print("Error: No revisions found for container app.")
         return 1
 
-    parsed_revs = []
+    parsed_revs: list[dict[str, Any]] = []
     for rev in revisions:
         props = rev.get("properties", {})
-        name = rev.get("name")
+        raw_name = rev.get("name")
+        if not raw_name or not isinstance(raw_name, str):
+            continue
         active = props.get("active") if "active" in props else rev.get("active")
         traffic = props.get("trafficWeight") if "trafficWeight" in props else rev.get("trafficWeight", 0)
         state = props.get("provisioningState") if "provisioningState" in props else rev.get("provisioningState")
         created = props.get("createdTime") if "createdTime" in props else rev.get("createdTime", "")
         parsed_revs.append({
-            "name": name,
+            "name": raw_name,
             "createdTime": created,
             "active": active,
             "trafficWeight": traffic,
@@ -192,8 +194,18 @@ def main() -> int:
 
     # Sort revisions chronologically: index 0 is oldest, index -1 is newest
     chronological_revs = sorted(parsed_revs, key=lambda r: str(r.get("createdTime", "")))
-    latest_rev = chronological_revs[-1]["name"]
-    previous_stable_rev = chronological_revs[0]["name"] if len(chronological_revs) > 1 else latest_rev
+    if not chronological_revs:
+        print("Error: No valid revisions found for container app.")
+        return 1
+
+    latest_rev: str | None = chronological_revs[-1].get("name")
+    previous_stable_rev: str | None = (
+        chronological_revs[0].get("name") if len(chronological_revs) > 1 else latest_rev
+    )
+
+    if latest_rev is None or previous_stable_rev is None:
+        print("Error: Failed to resolve revision names.")
+        return 1
 
     print("Discovered revisions (ordered chronologically):")
     for idx, r in enumerate(chronological_revs, start=1):
@@ -205,7 +217,7 @@ def main() -> int:
     traffic_before = ingress_before.get("traffic", [])
 
     # If --simulate-new-first requested, ensure we start on the latest revision
-    if args.simulate_new_first and latest_rev != previous_stable_rev:
+    if args.simulate_new_first and latest_rev != previous_stable_rev and latest_rev is not None:
         print(f"\n[Scenario Setup] Simulating incident on new version: setting traffic 100% -> {latest_rev}...")
         shift_traffic(args.app_name, args.resource_group, latest_rev, 100)
         time.sleep(2)
@@ -214,18 +226,26 @@ def main() -> int:
 
     # 3. Determine target rollback revision
     # Rollback destination: Previous Stable Revision (or user-specified --target-rev)
-    target_rev = args.target_rev or previous_stable_rev
+    target_rev: str | None = args.target_rev or previous_stable_rev
+    if target_rev is None:
+        print("Error: Target rollback revision cannot be resolved.")
+        return 1
 
     print("\nRollback Execution Plan:")
     print(f"  • Current Traffic Ingress     : {traffic_before}")
     print(f"  • Target Rollback Destination : {target_rev} (Previous Stable Revision)")
 
     # 4. Execute Rollback (Shift 100% traffic back to previous stable revision)
-    print(f"\nExecuting Rollback: Shifting 100% traffic back to {target_rev}...")
-    t0 = time.perf_counter()
-    shift_traffic(args.app_name, args.resource_group, target_rev, 100)
-    shift_duration_s = time.perf_counter() - t0
-    print(f"[OK] Traffic successfully rolled back in {shift_duration_s:.2f} seconds.")
+    shift_duration_s = 0.0
+    if target_rev is not None:
+        print(f"\nExecuting Rollback: Shifting 100% traffic back to {target_rev}...")
+        t0 = time.perf_counter()
+        shift_traffic(args.app_name, args.resource_group, target_rev, 100)
+        shift_duration_s = time.perf_counter() - t0
+        print(f"[OK] Traffic successfully rolled back in {shift_duration_s:.2f} seconds.")
+    else:
+        print("Error: Target revision could not be determined.")
+        return 1
 
     # 5. Confirm post-rollback traffic distribution
     ingress_after = get_containerapp_ingress(args.app_name, args.resource_group)
