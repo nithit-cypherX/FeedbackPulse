@@ -58,10 +58,10 @@ class SentimentClassifier:
     weights are never reloaded per call (P01-T03 section 3).
     """
 
-    def __init__(self, model, tokenizer, model_version: str) -> None:
+    def __init__(self, model, tokenizer, model_version: str | None = None) -> None:
         self._model = model
         self._tokenizer = tokenizer
-        self._model_version = model_version
+        self._model_version = model_version or ""
 
         # Read the label names from the loaded config instead of hardcoding the
         # order, so a different revision cannot silently shift the mapping.
@@ -81,7 +81,7 @@ class SentimentClassifier:
         tokenizer.model_max_length = max_total
 
     @classmethod
-    def load(cls, model_dir, model_version: str) -> "SentimentClassifier":
+    def load(cls, model_dir, model_version: str | None = None) -> "SentimentClassifier":
         """Load the model from a local directory, or raise ModelNotReady."""
         try:
             import torch

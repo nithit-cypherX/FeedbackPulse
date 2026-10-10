@@ -20,7 +20,7 @@ def confusion_counts(pairs, labels) -> dict[tuple[str, str], int]:
     return {(t, p): counts.get((t, p), 0) for t in labels for p in labels}
 
 
-def _safe_ratio(numerator: int, denominator: int) -> float:
+def _safe_ratio(numerator: float, denominator: float) -> float:
     """Return 0.0 for an empty denominator instead of raising.
 
     A label with no predictions has undefined precision. Reporting 0.0 keeps the
