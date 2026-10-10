@@ -12,6 +12,9 @@
 # so that simply pushing new code via 'git push' can automatically recreate
 # and redeploy the service via the GitHub Actions CD pipeline.
 #
+# Interactive confirmation is ALWAYS required: the user must explicitly
+# type 'yes' to proceed with deletion.
+#
 # Base infrastructure teardown (ACR and Environment) is commented out by default
 # to prevent accidental destruction. To permanently destroy all resources,
 # uncomment the marked sections below.
@@ -19,7 +22,6 @@
 # Supported modes:
 #   make teardown-dry-run               # Preview commands without executing
 #   make teardown                       # Interactive deletion of Container App
-#   ./scripts/teardown.sh --yes         # Non-interactive / CI automated mode
 # ==============================================================================
 
 set -euo pipefail
@@ -49,7 +51,6 @@ REGISTRY_NAME="${AZURE_REGISTRY_NAME:-itcs3556688166}"
 
 # Operational flags
 DRY_RUN=false
-AUTO_CONFIRM=false
 # Default scope is locked to 'app-only' for safety
 SCOPE="app-only"
 
@@ -63,14 +64,12 @@ ${BOLD}Usage:${NC}
 
 ${BOLD}Options:${NC}
   -n, --dry-run       Preview commands and resources that would be deleted (no action taken)
-  -y, --yes           Bypass confirmation prompt (useful for CI/automated scripts)
   --app-only          Delete only the Container App (default safe mode; preserves ACR & Env)
   -h, --help          Show this help message and exit
 
 ${BOLD}Examples:${NC}
   $0 --dry-run
   $0
-  $0 --yes
 EOF
     exit 0
 }
@@ -80,10 +79,6 @@ while [[ $# -gt 0 ]]; do
     case "$1" in
         -n|--dry-run)
             DRY_RUN=true
-            shift
-            ;;
-        -y|--yes)
-            AUTO_CONFIRM=true
             shift
             ;;
         --app-only)
@@ -106,7 +101,6 @@ echo -e "${BOLD}${CYAN}=========================================================
 echo -e "Resource Group : ${BOLD}${RESOURCE_GROUP}${NC}"
 echo -e "Scope Mode     : ${BOLD}${SCOPE} (Safe Mode: Container App only)${NC}"
 echo -e "Dry Run Mode   : ${BOLD}${DRY_RUN}${NC}"
-echo -e "Auto-confirm   : ${BOLD}${AUTO_CONFIRM}${NC}"
 echo ""
 
 # Verify Azure CLI availability
@@ -158,14 +152,12 @@ if [[ "$DRY_RUN" == true ]]; then
     exit 0
 fi
 
-# Prompt confirmation if not in auto-confirm mode
-if [[ "$AUTO_CONFIRM" != true ]]; then
-    echo -e "${YELLOW}${BOLD}WARNING: You are about to permanently delete the Container App '${CONTAINER_APP_NAME}'!${NC}"
-    read -r -p "Are you sure you want to proceed? (yes/N): " CONFIRMATION
-    if [[ "$CONFIRMATION" != "yes" && "$CONFIRMATION" != "YES" ]]; then
-        echo -e "${YELLOW}Teardown cancelled by user. No resources were modified.${NC}"
-        exit 0
-    fi
+# Prompt confirmation (Always required for safety)
+echo -e "${YELLOW}${BOLD}WARNING: You are about to permanently delete the Container App '${CONTAINER_APP_NAME}'!${NC}"
+read -r -p "Are you sure you want to proceed? (yes/N): " CONFIRMATION
+if [[ "$CONFIRMATION" != "yes" && "$CONFIRMATION" != "YES" ]]; then
+    echo -e "${YELLOW}Teardown cancelled by user. No resources were modified.${NC}"
+    exit 0
 fi
 
 # Execution phase

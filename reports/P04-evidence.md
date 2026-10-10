@@ -224,7 +224,6 @@ FeedbackPulse — Azure Cloud Teardown Verification (P04-T06)
 Resource Group : itcs355-6688166
 Scope Mode     : app-only (Safe Mode: Container App only)
 Dry Run Mode   : true
-Auto-confirm   : false
 
 Active Azure Subscription: Azure for Students
 
@@ -239,8 +238,9 @@ Target resources planned for deletion:
 
 ### 8.2 คุณสมบัติความปลอดภัย (Safety & Guardrails)
 1. **Safe Scope by Default (`--app-only`):** ป้องกันการลบ Base Infrastructure (ACR / Environment) โดยไม่ตั้งใจ ช่วยให้คงสถานะพร้อมสร้างใหม่ผ่าน Git Push ได้เสมอ
-2. **Interactive Prompt:** ในโหมดปกติ ระบบจะแสดงรายชื่อ Resource และหยุดรอให้ผู้ใช้พิมพ์ `yes` ยืนยันอย่างชัดเจนก่อนดำเนินการ
+2. **Mandatory Interactive Prompt:** ระบบจะหยุดรอให้ผู้ใช้พิมพ์ `yes` ยืนยันอย่างชัดเจนเสมอ โดยไม่มีการ bypass เพื่อป้องกันอุบัติเหตุการลบโดยไม่ได้ตั้งใจ
 3. **Resource Existence Check:** มีการตรวจสอบสถานะ Resource ก่อนลบ หากถูกลบไปแล้วระบบจะข้ามอย่างปลอดภัยโดยไม่ Crash
+
 
 ### 8.3 การเปรียบเทียบระหว่าง `make teardown-dry-run` และ `make teardown`
 
