@@ -9,6 +9,9 @@ name: CD
 
 on: # -- Trigger condition / Event trigger
   workflow_dispatch: # รองรับการสั่ง deploy แบบ manual ผ่าน GitHub Actions UI
+  push: # เปิดให้ trigger CD อัตโนมัติเมื่อ push บน branch นี้เพื่อทดสอบ
+    branches:
+      - "P03-P04/backend-and-deploy"
   workflow_run:
     workflows: [CI] # CD จะทำงานเมื่อ CI บน branch main completed
     types: [completed]
@@ -34,8 +37,8 @@ env: # กำหนดค่า default value ให้กับแต่ละ 
 
 jobs:
   deploy:
-    # รันเฉพาะเมื่อ CI ผ่านสำเร็จ (success) หรือเมื่อกดรันแบบ manual
-    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
+    # รันเมื่อ CI ผ่านสำเร็จ หรือกด manual หรือ push บน branch ทดสอบ
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' || github.event_name == 'push' }}
     name: Build, Push & Deploy to Azure Container Apps
     runs-on: ubuntu-latest
     environment: production # เพื่อให้ GitHub บันทึก Deployment Tracking, แสดง URL ของ Container App และสถานะในหน้าหลักของ Repository
