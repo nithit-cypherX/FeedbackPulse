@@ -54,6 +54,22 @@ jobs:
       - name: Install dependencies from lockfile
         run: uv sync --frozen --all-groups
 
+      - name: Cache model artifact # แคชโมเดล artifact เพื่อความรวดเร็วในการ deploy
+        id: cache-artifact
+        uses: actions/cache@v4
+        with:
+          path: artifacts/
+          key: model-artifact-${{ hashFiles('src/feedbackpulse/model_files.py', 'src/feedbackpulse/package_artifact.py') }}
+
+      - name: Assemble model artifact # ประกอบโมเดล artifact ก่อน docker build (เนื่องจาก artifacts/ ถูกละเว้นใน .gitignore)
+        run: |
+          if [ ! -d "artifacts/sentiment-6e7ff9fbc17c/model" ]; then
+            echo "Artifacts not found. Assembling model artifact..."
+            PYTHONPATH=src uv run python -m feedbackpulse.package_artifact
+          else
+            echo "Artifacts already present from cache."
+          fi
+
       # --- Azure Login via OIDC (No long-lived keys) -------------------------
       - name: Log in to Azure (OIDC)
         if: "${{ secrets.AZURE_CLIENT_ID != '' }}"

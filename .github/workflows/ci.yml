@@ -40,6 +40,22 @@ jobs:
       - name: Install dependencies from lockfile # ติดตั้ง dependencies ทั้งหมดจาก lockfile
         run: uv sync --frozen --all-groups
 
+      - name: Cache model artifact # แคชโมเดล artifact เพื่อลดเวลาดาวน์โหลดและแปลง safetensors ซ้ำ
+        id: cache-artifact
+        uses: actions/cache@v4
+        with:
+          path: artifacts/
+          key: model-artifact-${{ hashFiles('src/feedbackpulse/model_files.py', 'src/feedbackpulse/package_artifact.py') }}
+
+      - name: Assemble model artifact # ประกอบโมเดล artifact (artifacts/sentiment-6e7ff9fbc17c)
+        run: |
+          if [ ! -d "artifacts/sentiment-6e7ff9fbc17c/model" ]; then
+            echo "Artifacts not found. Assembling model artifact..."
+            PYTHONPATH=src uv run python -m feedbackpulse.package_artifact
+          else
+            echo "Artifacts already present from cache."
+          fi
+
       - name: Lint with Ruff # ตรวจสอบ Code Style และ Syntax ทั้งหมด
         run: uv run ruff check
 
@@ -60,6 +76,34 @@ jobs:
     steps:
       - name: Checkout repository # ดึงโค้ดจาก repository
         uses: actions/checkout@v4
+
+      - name: Install uv Package Manager # ติดตั้ง uv package manager
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+
+      - name: Set up Python 3.13 # ตั้งค่า Python 3.13
+        run: uv python install 3.13
+
+      - name: Install dependencies from lockfile # ติดตั้ง dependencies ทั้งหมดจาก lockfile
+        run: uv sync --frozen --all-groups
+
+      - name: Cache model artifact # ดึงแคชโมเดล artifact ที่สร้างจาก Job 1
+        id: cache-artifact
+        uses: actions/cache@v4
+        with:
+          path: artifacts/
+          key: model-artifact-${{ hashFiles('src/feedbackpulse/model_files.py', 'src/feedbackpulse/package_artifact.py') }}
+
+      - name: Assemble model artifact # สร้างโมเดล artifact หากไม่มีอยู่ในแคช (เนื่องจาก artifacts/ ถูกละเว้นใน .gitignore)
+        run: |
+          if [ ! -d "artifacts/sentiment-6e7ff9fbc17c/model" ]; then
+            echo "Artifacts not found. Assembling model artifact..."
+            PYTHONPATH=src uv run python -m feedbackpulse.package_artifact
+          else
+            echo "Artifacts already present from cache."
+          fi
 
       - name: Set up Docker Buildx # ตั้งค่า Docker Buildx สำหรับ build multi-platform image
         uses: docker/setup-buildx-action@v3
