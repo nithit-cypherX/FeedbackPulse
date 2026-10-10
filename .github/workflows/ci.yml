@@ -2,6 +2,7 @@
 name: CI
 
 on: # -- Event Triggers
+workflow_dispatch: # รองรับการสั่งรันแบบ manual ผ่าน workflow_dispatch
   push: # ทำงานอัตโนมัติเมื่อมี push ไปยัง branch ใดๆ (รวมถึง main และ feature branch)
     branches: 
       - main
@@ -9,7 +10,6 @@ on: # -- Event Triggers
   pull_request: # ทำงานอัตโนมัติเมื่อมี pull_request เข้าหา main
     branches:
       - main
-  workflow_dispatch: # รองรับการสั่งรันแบบ manual ผ่าน workflow_dispatch
 
 permissions: # กำหนดสิทธิ์ (Permissions)
   contents: read

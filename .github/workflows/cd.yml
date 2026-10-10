@@ -8,12 +8,12 @@
 name: CD
 
 on: # -- Trigger condition / Event trigger
+  workflow_dispatch: # รองรับการสั่ง deploy แบบ manual ผ่าน GitHub Actions UI
   workflow_run:
     workflows: [CI] # CD จะทำงานเมื่อ CI บน branch main completed
     types: [completed]
     branches: # ** หมายถึงทุก branch รวมถึง main และ feature branch
       - "**"
-  workflow_dispatch: # รองรับการสั่ง deploy แบบ manual ผ่าน GitHub Actions UI
 
 permissions:
   contents: read
@@ -39,6 +39,8 @@ jobs:
     name: Build, Push & Deploy to Azure Container Apps
     runs-on: ubuntu-latest
     environment: production # เพื่อให้ GitHub บันทึก Deployment Tracking, แสดง URL ของ Container App และสถานะในหน้าหลักของ Repository
+    env:
+      AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID || vars.AZURE_CLIENT_ID }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -73,15 +75,15 @@ jobs:
 
       # --- Azure Login via OIDC (No long-lived keys) -------------------------
       - name: Log in to Azure (OIDC)
-        if: "${{ secrets.AZURE_CLIENT_ID != '' }}"
+        if: ${{ env.AZURE_CLIENT_ID != '' }}
         uses: azure/login@v2
         with:
-          client-id: ${{ secrets.AZURE_CLIENT_ID }}
-          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          client-id: ${{ secrets.AZURE_CLIENT_ID || vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID || vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID || vars.AZURE_SUBSCRIPTION_ID }}
 
       - name: Log in to Azure (Service Principal Fallback)
-        if: "${{ secrets.AZURE_CLIENT_ID == '' && secrets.AZURE_CREDENTIALS != '' }}"
+        if: ${{ env.AZURE_CLIENT_ID == '' }}
         uses: azure/login@v2
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
@@ -110,6 +112,7 @@ jobs:
           DEPLOY_SHA="${{ github.event.workflow_run.head_sha || github.sha }}"
           MANAGED_ENV_ID=$(az containerapp env show -n "$AZURE_CONTAINER_APP_ENV" -g "$AZURE_RESOURCE_GROUP" --query id -o tsv)
           REG_PASS=$(az acr credential show -n "$AZURE_REGISTRY_NAME" --query "passwords[0].value" -o tsv)
+          echo "::add-mask::$REG_PASS"
           IMAGE_TAG="$AZURE_REGISTRY_SERVER/feedbackpulse:${DEPLOY_SHA}"
 
           MANAGED_ENV_ID="$MANAGED_ENV_ID" \
