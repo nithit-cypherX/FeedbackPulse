@@ -1,0 +1,113 @@
+{
+  "timestamp_utc": "2026-10-10T04:43:19Z",
+  "endpoint": "https://feedbackpulse-api.redground-de34b2df.eastasia.azurecontainerapps.io",
+  "metrics_summary": {
+    "total_checks": 12,
+    "passed_checks": 12,
+    "failed_checks": 0,
+    "error_rate_pct": 0.0,
+    "cold_start_seconds": 37.94,
+    "warm_p95_latency_s": 0.213,
+    "sla_p95_target_s": 3.0,
+    "sla_status": "PASSED",
+    "reporting_policy": "Error rates and cold-start time are reported separately per Proposal \u00a73"
+  },
+  "results": [
+    {
+      "test_name": "GET /health (Liveness Probe)",
+      "expected_status": 200,
+      "actual_status": 200,
+      "passed": true,
+      "latency_ms": 64.35,
+      "details": "Body: {\"status\":\"healthy\"}"
+    },
+    {
+      "test_name": "GET /ready (Readiness Probe)",
+      "expected_status": 200,
+      "actual_status": 200,
+      "passed": true,
+      "latency_ms": 61.95,
+      "details": "Model version: sentiment-6e7ff9fbc17c-0110c462"
+    },
+    {
+      "test_name": "POST /predict (Missing Token -> 401)",
+      "expected_status": 401,
+      "actual_status": 401,
+      "passed": true,
+      "latency_ms": 63.36,
+      "details": "Code: UNAUTHORIZED"
+    },
+    {
+      "test_name": "POST /predict (Invalid Token -> 401)",
+      "expected_status": 401,
+      "actual_status": 401,
+      "passed": true,
+      "latency_ms": 60.98,
+      "details": "Code: UNAUTHORIZED"
+    },
+    {
+      "test_name": "POST /predict (Malformed JSON -> 400)",
+      "expected_status": 400,
+      "actual_status": 400,
+      "passed": true,
+      "latency_ms": 63.55,
+      "details": "Code: BAD_REQUEST"
+    },
+    {
+      "test_name": "POST /predict (Missing text field -> 422)",
+      "expected_status": 422,
+      "actual_status": 422,
+      "passed": true,
+      "latency_ms": 65.5,
+      "details": "Code: INVALID_TEXT"
+    },
+    {
+      "test_name": "POST /predict (Empty text string -> 422)",
+      "expected_status": 422,
+      "actual_status": 422,
+      "passed": true,
+      "latency_ms": 63.05,
+      "details": "Code: INVALID_TEXT"
+    },
+    {
+      "test_name": "POST /predict (Boundary: Exactly 510 tokens -> 200 OK)",
+      "expected_status": 200,
+      "actual_status": 200,
+      "passed": true,
+      "latency_ms": 529.66,
+      "details": "Sentiment: positive"
+    },
+    {
+      "test_name": "POST /predict (Boundary: 511 tokens -> 422 TEXT_TOO_LONG)",
+      "expected_status": 422,
+      "actual_status": 422,
+      "passed": true,
+      "latency_ms": 66.09,
+      "details": "Code: TEXT_TOO_LONG"
+    },
+    {
+      "test_name": "POST /predict (Known Positive Feedback)",
+      "expected_status": 200,
+      "actual_status": 200,
+      "passed": true,
+      "latency_ms": 141.92,
+      "details": "Sentiment: positive, Score: 0.9807"
+    },
+    {
+      "test_name": "POST /predict (Known Negative Feedback)",
+      "expected_status": 200,
+      "actual_status": 200,
+      "passed": true,
+      "latency_ms": 104.58,
+      "details": "Sentiment: negative, Score: 0.9436"
+    },
+    {
+      "test_name": "POST /predict (Known Neutral Feedback)",
+      "expected_status": 200,
+      "actual_status": 200,
+      "passed": true,
+      "latency_ms": 110.25,
+      "details": "Sentiment: neutral, Score: 0.9301"
+    }
+  ]
+}

@@ -91,11 +91,6 @@ make deploy
 make status
 ```
 
-### Optional: สั่ง Rollback Traffic 100% กลับไปยัง Revision ที่ระบุ
-```bash
-make rollback REV=<target-revision-name>
-```
-
 ### Optional: รันชุดทดสอบความถูกต้องของ Cloudlayer & Portability
 ```bash
 uv run pytest tests/test_cloudlayer.py tests/test_portability.py

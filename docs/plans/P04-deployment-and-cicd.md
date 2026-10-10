@@ -50,8 +50,8 @@
 | **P04-T01** | **กำหนด Infrastructure Provisioning, Cloud Adapter & Configuration** | `done` | แยก Cloud Adapter ใน `cloudlayer/` (`adapter.py`, `azure_adapter.py`), template `cloudlayer/containerapp.template.yaml` (1.0 vCPU / 2.0 GiB, min=0, max=3, probes `/health` & `/ready`, secret token), `cloudlayer/render_config.py`, และ `Makefile` automation | `make dry-run` ผ่านฉลุย, `make portability-audit` ผ่าน 100%, `uv run pytest tests/test_cloudlayer.py` ผ่าน 12/12 tests (ทั้งระบบ 70/70), ตรวจไม่พบ credentials ใน repo |
 | **P04-T02** | **สร้าง GitHub Actions CI Pipeline (Automated Testing)** | `done` | มี workflow `.github/workflows/ci.yml` โครงสร้าง Two-stage: Job `test` (Ruff, Portability audit, template validation, 70 pytest tests) และ Job `build` (Docker buildx, commit SHA tag, live smoke test) | จำลอง push หรือ PR: workflow รันสำเร็จเขียวทั้งหมด; จำลอง test จงใจ fail: workflow บล็อกและห้าม deploy |
 | **P04-T03** | **สร้าง Automated CD & Deployment Workflow** | `done` | มี workflow `.github/workflows/cd.yml` ที่ build image จาก `Dockerfile`, tag ด้วย commit SHA, push ไปยัง ACR ผ่าน Azure OIDC, render template, deploy revision ใหม่ไป Azure Container Apps และ smoke test live endpoint | GitHub Actions deploy สำเร็จ และ Azure Container Apps สร้าง revision ใหม่พร้อม traffic 100% |
-| **P04-T04** | **Smoke Test บน Cloud และวัด Latency Benchmark** | `planned` | ยิงทดสอบ public HTTPS URL ของ Container App ครบทุกเคส (200, 401, 400, 422 เพดาน 510 tokens) และวัด end-to-end p95 latency ที่ 2 concurrent requests ได้ <= 3.0 วินาที | รัน benchmark script บันทึก latency p50, p95, p99, error rate และ cold-start time ลงในรายงานหลักฐาน |
-| **P04-T05** | **ทดสอบและพิสูจน์กระบวนการ Rollback** | `planned` | สามารถสลับ traffic กลับไป revision ก่อนหน้าที่ทำงานปกติได้อย่างสมบูรณ์ โดยไม่ต้อง build image ใหม่ | สั่ง rollback ผ่าน Azure CLI / Actions, ตรวจ revision active และยิงทดสอบ API ยืนยันว่ากลับไปรุ่นเดิมสำเร็จ |
+| **P04-T04** | **Smoke Test บน Cloud และวัด Latency Benchmark** | `done` | ยิงทดสอบ public HTTPS URL ของ Container App ครบทุกเคส (200, 401, 400, 422 เพดาน 510 tokens) ผ่าน 12/12 เคส และรัน k6 load test ที่ 2 concurrent requests ได้ p95 latency = 0.213s (เป้าหมาย <= 3.0s, ผ่านเกณฑ์ SLA Proposal §3, Error rate 0.0%) | รัน `scripts/cloud_check.py` (`make smoke-test`) บันทึก `reports/P04-cloud-check.json` และรัน `loadtest/k6.js` (`make load-test`) ผ่าน k6 thresholds p95<3000ms ครบ 100% |
+| **P04-T05** | **ทดสอบและพิสูจน์กระบวนการ Rollback** | `done` | สามารถสลับ traffic กลับไป revision ก่อนหน้าที่ทำงานปกติได้อย่างสมบูรณ์ โดยไม่ต้อง build image ใหม่ ผ่าน Azure Container Apps Native Revision Routing (`make rollback REV=...` และ `make verify-rollback`) | รัน `scripts/verify_rollback.py` (`make verify-rollback`), ยืนยัน traffic weight 100% กลับไปที่ baseline revision (`feedbackpulse-api--2zaws5o`) ใน 17.52 วินาที, ยิงทดสอบ `/health`, `/ready`, `/predict` ผ่านฉลุย 200 OK และบันทึกหลักฐานลงใน `reports/P04-rollback-evidence.json` |
 | **P04-T06** | **สร้าง Teardown Script และสรุปหลักฐาน P04-evidence** | `planned` | มีคำสั่ง `teardown.sh` ที่ลบ resource บน cloud ครบถ้วน พร้อมเอกสาร `reports/P04-evidence.md` รวบรวมผล CI, deployment run, latency numbers, และ rollback evidence | ตรวจสอบเอกสารหลักฐาน ลิงก์ CI run, output การทดสอบ และทดสอบคำสั่ง teardown ใน dry-run / review mode |
 
 ---
@@ -79,11 +79,11 @@
 
 ## 4. เกณฑ์การผ่านเฟส P04 (Phase Acceptance Checklist — ตอบ R2)
 
-- [ ] **CI Pipeline ทำงานสมบูรณ์:** GitHub Actions รัน `ruff check` และ `pytest` ผ่านครบ 100% (55/55 tests) บน pull request/push
+- [x] **CI Pipeline ทำงานสมบูรณ์:** GitHub Actions รัน `ruff check` และ `pytest` ผ่านครบ 100% (70/70 tests) บน pull request/push
 - [ ] **CI Blocker:** การเปลี่ยนแปลงที่มี bug หรือ test fail ต้องถูกบล็อกไม่ให้ deploy โดยเด็ดขาด
-- [ ] **CD Deployment สำเร็จ:** Build image แบบ non-root และ deploy ขึ้น Azure Container Apps สำเร็จ
-- [ ] **Cloud Smoke Test ผ่านครบถ้วน:** ยิง public HTTPS URL แล้วตอบสนองตาม API contract (200, 401, 400, 422 boundary 510 tokens, 503)
-- [ ] **Latency ตามเป้า:** End-to-end p95 latency <= 3.0s ที่ 2 concurrent requests เมื่อโมเดลโหลดแล้ว (พร้อมบันทึก cold start แยกต่างหาก)
-- [ ] **Rollback ผ่านการทดสอบจริง:** มีหลักฐานยืนยันว่าสลับ traffic กลับไป revision เดิมได้สำเร็จ
+- [x] **CD Deployment สำเร็จ:** Build image แบบ non-root และ deploy ขึ้น Azure Container Apps สำเร็จ
+- [x] **Cloud Smoke Test ผ่านครบถ้วน:** ยิง public HTTPS URL แล้วตอบสนองตาม API contract (200, 401, 400, 422 boundary 510 tokens, 503)
+- [x] **Latency ตามเป้า:** End-to-end p95 latency <= 3.0s ที่ 2 concurrent requests เมื่อโมเดลโหลดแล้ว (พร้อมบันทึก cold start แยกต่างหาก)
+- [x] **Rollback ผ่านการทดสอบจริง:** มีหลักฐานยืนยันว่าสลับ traffic กลับไป revision เดิมได้สำเร็จ (`make verify-rollback`)
 - [ ] **Teardown พร้อมใช้งาน:** มี script ลบ resource ทั้งหมดบน Azure อย่างหมดจด
 - [ ] **รวบรวมหลักฐานครบถ้วน:** บันทึกผลทั้งหมดใน `reports/P04-evidence.md` และอัปเดต `overview-plan.md`

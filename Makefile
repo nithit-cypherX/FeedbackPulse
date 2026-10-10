@@ -11,7 +11,7 @@ export PATH := $(HOME)/.local/bin:$(HOME)/.cargo/bin:/usr/local/bin:$(PATH)
 # Resolve uv binary location automatically
 UV ?= $(shell if [ -x "$$HOME/.local/bin/uv" ]; then echo "$$HOME/.local/bin/uv"; elif [ -x "$$HOME/.cargo/bin/uv" ]; then echo "$$HOME/.cargo/bin/uv"; else which uv 2>/dev/null || echo "uv"; fi)
 
-.PHONY: help test lint portability-audit validate-config docker-build docker-push dry-run deploy status rollback
+.PHONY: help test lint portability-audit validate-config docker-build docker-push dry-run deploy status change-traffic verify-rollback
 
 help:
 	@echo "========================================================================"
@@ -22,6 +22,9 @@ help:
 	@echo "  make lint               : Run ruff check"
 	@echo "  make portability-audit  : Run automated portability audit (P01-T03 §10)"
 	@echo "  make validate-config    : Validate Container App template constraints"
+	@echo "  make smoke-test         : Run public cloud API contract smoke tests (12 cases)"
+	@echo "  make load-test          : Run k6 load & concurrency benchmark (VUs=2, p95 <= 3s)"
+	@echo "  make verify-rollback    : Verify rollback traffic shift and test live endpoint"
 	@echo ""
 	@echo "Container & Image Operations:"
 	@echo "  make docker-build       : Build Docker container image locally"
@@ -31,7 +34,7 @@ help:
 	@echo "  make dry-run            : Dry run provisioning and validate cloud environment"
 	@echo "  make deploy             : Deploy or update Azure Container App from YAML"
 	@echo "  make status             : Check deployed Container App FQDN and revisions"
-	@echo "  make rollback REV=...   : Shift 100% traffic back to specified revision"
+	@echo "  make change-traffic REV=...   : Shift 100% traffic back to specified revision"
 	@echo "========================================================================"
 
 # --- Testing & Quality Assurance ---
@@ -46,6 +49,12 @@ portability-audit:
 
 validate-config:
 	$(UV) run python cloudlayer/render_config.py --validate-only
+
+smoke-test:
+	PYTHONPATH=src $(UV) run python scripts/cloud_check.py
+
+load-test:
+	k6 run -e TARGET="https://feedbackpulse-api.redground-de34b2df.eastasia.azurecontainerapps.io/predict" -e TOKEN="$(SERVICE_TOKEN)" -e VUS=2 -e DURATION=10s loadtest/k6.js
 
 # --- Docker Container Operations ---
 docker-build:
@@ -98,11 +107,14 @@ status:
 	az containerapp show -n $(AZURE_CONTAINER_APP_NAME) -g $(AZURE_RESOURCE_GROUP) \
 		--query "{FQDN:properties.configuration.ingress.fqdn, Traffic:properties.configuration.ingress.traffic, RevisionsMode:properties.configuration.activeRevisionsMode}" -o json
 
-rollback:
+change-traffic:
 	@if [ -z "$(REV)" ]; then \
-		echo "Error: Must specify revision name to rollback. Example: make rollback REV=feedbackpulse-api--0001"; exit 1; \
+		echo "Error: Must specify revision name to change traffic. Example: make change-traffic REV=feedbackpulse-api--0001"; exit 1; \
 	fi
 	@if [ -z "$(AZURE_CONTAINER_APP_NAME)" ] || [ -z "$(AZURE_RESOURCE_GROUP)" ]; then \
 		echo "Error: AZURE_CONTAINER_APP_NAME and AZURE_RESOURCE_GROUP must be set in cloud.env"; exit 1; \
 	fi
 	az containerapp ingress traffic set -n $(AZURE_CONTAINER_APP_NAME) -g $(AZURE_RESOURCE_GROUP) --revision-weight $(REV)=100
+
+verify-rollback:
+	PYTHONPATH=src $(UV) run python scripts/verify_rollback.py $(if $(SIMULATE),--simulate-new-first,) $(ARGS)

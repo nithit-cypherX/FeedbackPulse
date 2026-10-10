@@ -1,0 +1,65 @@
+{
+  "timestamp_utc": "2026-10-10T08:13:33Z",
+  "container_app": "feedbackpulse-api",
+  "resource_group": "itcs355-6688166",
+  "endpoint": "https://feedbackpulse-api.redground-de34b2df.eastasia.azurecontainerapps.io",
+  "newest_revision": "feedbackpulse-api--rev2",
+  "previous_stable_revision": "feedbackpulse-api--2zaws5o",
+  "rollback_target_revision": "feedbackpulse-api--2zaws5o",
+  "revisions": [
+    {
+      "name": "feedbackpulse-api--2zaws5o",
+      "createdTime": "2026-10-08T14:05:21+00:00",
+      "active": true,
+      "trafficWeight": 100,
+      "provisioningState": "Provisioned"
+    },
+    {
+      "name": "feedbackpulse-api--rev2",
+      "createdTime": "2026-10-10T05:20:44+00:00",
+      "active": true,
+      "trafficWeight": 0,
+      "provisioningState": "Provisioned"
+    }
+  ],
+  "traffic_before": [
+    {
+      "revisionName": "feedbackpulse-api--rev2",
+      "weight": 100
+    }
+  ],
+  "traffic_after": [
+    {
+      "revisionName": "feedbackpulse-api--2zaws5o",
+      "weight": 100
+    }
+  ],
+  "shift_duration_seconds": 15.0,
+  "endpoint_verification": {
+    "health": {
+      "status_code": 200,
+      "latency_ms": 68.69,
+      "body": {
+        "status": "healthy"
+      }
+    },
+    "ready": {
+      "status_code": 200,
+      "latency_ms": 147.33,
+      "body": {
+        "status": "ready",
+        "model_version": "sentiment-6e7ff9fbc17c-0110c462"
+      }
+    },
+    "predict": {
+      "status_code": 200,
+      "latency_ms": 147.53,
+      "body": {
+        "sentiment": "positive",
+        "score": 0.9684,
+        "model_version": "sentiment-6e7ff9fbc17c-0110c462"
+      }
+    }
+  },
+  "status": "PASSED"
+}
