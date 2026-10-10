@@ -8,19 +8,14 @@
 name: CD
 
 on: # -- Trigger condition / Event trigger
-  workflow_dispatch: # รองรับการสั่ง deploy แบบ manual ผ่าน GitHub Actions UI
-  push: # เปิดให้ trigger CD อัตโนมัติเมื่อ push บน branch นี้เพื่อทดสอบ
-    branches:
-      - "P03-P04/backend-and-deploy"
   workflow_run:
     workflows: [CI] # CD จะทำงานเมื่อ CI บน branch main completed
     types: [completed]
-    branches: # ** หมายถึงทุก branch รวมถึง main และ feature branch
-      - "**"
+    branches: [main]
+  workflow_dispatch: # รองรับการสั่ง deploy แบบ manual ผ่าน GitHub Actions UI
 
 permissions:
   contents: read
-  actions: read # Required to query and wait for CI workflow status
   id-token: write # Required for Azure OIDC Federated Credentials
 
 # Prevent concurrent deployment collisions (Prevent race condition from multiple deploys at the same time)
@@ -38,8 +33,8 @@ env: # กำหนดค่า default value ให้กับแต่ละ 
 
 jobs:
   deploy:
-    # รันเมื่อ CI ผ่านสำเร็จ หรือกด manual หรือ push บน branch ทดสอบ
-    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' || github.event_name == 'push' }}
+    # รันเฉพาะเมื่อ CI ผ่านสำเร็จ (success) หรือเมื่อกดรันแบบ manual
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
     name: Build, Push & Deploy to Azure Container Apps
     runs-on: ubuntu-latest
     environment: production # เพื่อให้ GitHub บันทึก Deployment Tracking, แสดง URL ของ Container App และสถานะในหน้าหลักของ Repository
@@ -48,35 +43,6 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
-      - name: Verify CI Pipeline Status (Wait for CI to be Green)
-        if: ${{ github.event_name == 'push' }}
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          COMMIT_SHA="${{ github.sha }}"
-          echo "Checking CI status for commit $COMMIT_SHA..."
-
-          CI_RUN_ID=""
-          for i in $(seq 1 20); do
-            CI_RUN_ID=$(gh run list --workflow=ci.yml --commit="$COMMIT_SHA" --json databaseId --jq '.[0].databaseId // empty')
-            if [ -n "$CI_RUN_ID" ]; then
-              echo "Found CI workflow run ID: $CI_RUN_ID"
-              break
-            fi
-            echo "Waiting for CI workflow run to be registered... ($i/20)"
-            sleep 3
-          done
-
-          if [ -z "$CI_RUN_ID" ]; then
-            echo "Error: CI run for commit $COMMIT_SHA was not found. Halting deployment."
-            exit 1
-          fi
-
-          echo "Watching CI run #$CI_RUN_ID until complete..."
-          gh run watch "$CI_RUN_ID" --exit-status
-
-          echo "==> CI workflow passed successfully! Proceeding with CD deployment."
 
       - name: Install uv Package Manager
         uses: astral-sh/setup-uv@v5
