@@ -2,7 +2,7 @@
 name: CI
 
 on: # -- Event Triggers
-workflow_dispatch: # รองรับการสั่งรันแบบ manual ผ่าน workflow_dispatch
+  workflow_dispatch: # รองรับการสั่งรันแบบ manual ผ่าน workflow_dispatch
   push: # ทำงานอัตโนมัติเมื่อมี push ไปยัง branch ใดๆ (รวมถึง main และ feature branch)
     branches: 
       - main
