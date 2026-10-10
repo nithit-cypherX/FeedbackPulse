@@ -20,6 +20,7 @@ on: # -- Trigger condition / Event trigger
 
 permissions:
   contents: read
+  actions: read # Required to query and wait for CI workflow status
   id-token: write # Required for Azure OIDC Federated Credentials
 
 # Prevent concurrent deployment collisions (Prevent race condition from multiple deploys at the same time)
@@ -47,6 +48,35 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Verify CI Pipeline Status (Wait for CI to be Green)
+        if: ${{ github.event_name == 'push' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          COMMIT_SHA="${{ github.sha }}"
+          echo "Checking CI status for commit $COMMIT_SHA..."
+
+          CI_RUN_ID=""
+          for i in $(seq 1 20); do
+            CI_RUN_ID=$(gh run list --workflow=ci.yml --commit="$COMMIT_SHA" --json databaseId --jq '.[0].databaseId // empty')
+            if [ -n "$CI_RUN_ID" ]; then
+              echo "Found CI workflow run ID: $CI_RUN_ID"
+              break
+            fi
+            echo "Waiting for CI workflow run to be registered... ($i/20)"
+            sleep 3
+          done
+
+          if [ -z "$CI_RUN_ID" ]; then
+            echo "Error: CI run for commit $COMMIT_SHA was not found. Halting deployment."
+            exit 1
+          fi
+
+          echo "Watching CI run #$CI_RUN_ID until complete..."
+          gh run watch "$CI_RUN_ID" --exit-status
+
+          echo "==> CI workflow passed successfully! Proceeding with CD deployment."
 
       - name: Install uv Package Manager
         uses: astral-sh/setup-uv@v5
