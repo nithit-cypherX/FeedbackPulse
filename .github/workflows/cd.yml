@@ -11,7 +11,8 @@ on: # -- Trigger condition / Event trigger
   workflow_run:
     workflows: [CI] # CD จะทำงานเมื่อ CI บน branch main completed
     types: [completed]
-    branches: [main]
+    branches: # ** หมายถึงทุก branch รวมถึง main และ feature branch
+      - "**"
   workflow_dispatch: # รองรับการสั่ง deploy แบบ manual ผ่าน GitHub Actions UI
 
 permissions:
