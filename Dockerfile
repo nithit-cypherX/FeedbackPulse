@@ -46,6 +46,7 @@ ENV MODEL_VERSION=sentiment-6e7ff9fbc17c-0110c462
 # Copy application source code and verified packaged model artifact
 COPY --chown=appuser:appuser src/ /app/src/
 COPY --chown=appuser:appuser artifacts/ /app/artifacts/
+COPY --chown=appuser:appuser reports/registry/sentiment-*.json /app/reports/registry/
 
 USER appuser
 

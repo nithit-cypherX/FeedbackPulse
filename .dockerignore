@@ -3,7 +3,10 @@
 .venv
 tests
 data
-reports
+reports/*
+!reports/registry/
+reports/registry/*
+!reports/registry/sentiment-*.json
 .env
 .env.*
 cloud.env

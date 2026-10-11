@@ -6,6 +6,7 @@ re-ran the evaluation, which would leave a rolled-back version with lineage
 nobody could check — exactly what R2 needs to work.
 """
 
+import hashlib
 import json
 
 import pytest
@@ -85,8 +86,9 @@ def test_run_ids_differ_for_runs_started_in_the_same_second():
     assert all(value.startswith("run-") for value in ids)
 
 
-def test_lineage_carries_the_run_id(tmp_path, monkeypatch):
-    """Without this, model_version could not lead back to the run that measured it."""
+@pytest.fixture
+def registration_inputs(tmp_path, monkeypatch):
+    """Small local files: check registration without downloading a model."""
     evaluation = tmp_path / "result.json"
     evaluation.write_text(
         json.dumps(
@@ -116,13 +118,26 @@ def test_lineage_carries_the_run_id(tmp_path, monkeypatch):
     monkeypatch.setattr(registry.gitinfo, "behaviour_changed_between", lambda _c: [])
     monkeypatch.setattr(registry.dataset, "DATASET_SHA256", "ds")
 
-    manifest = tmp_path / "manifest.json"
+    artifact = tmp_path / "artifact"
+    (artifact / "model").mkdir(parents=True)
+    contents = {
+        "model/config.json": b'{"model_type": "roberta"}',
+        "model/model.safetensors": b"test weights, not a loadable model",
+        "upstream-model-card.md": b"test model card",
+    }
+    for name, content in contents.items():
+        (artifact / name).write_bytes(content)
+
+    manifest = artifact / "manifest.json"
     manifest.write_text(
         json.dumps(
             {
                 "artifact_id": "sentiment-aaaaaaaaaaaa",
                 "loadable_dir": "model",
-                "files_sha256": {},
+                "files_sha256": {
+                    name: hashlib.sha256(content).hexdigest()
+                    for name, content in contents.items()
+                },
                 "source": {
                     "revision": "rev",
                     "licence": "CC BY 4.0",
@@ -132,5 +147,70 @@ def test_lineage_carries_the_run_id(tmp_path, monkeypatch):
         ),
         encoding="utf-8",
     )
-    lineage = registry.build_lineage(tmp_path)
+    return artifact
+
+
+def test_lineage_carries_the_run_id(registration_inputs):
+    """Without this, model_version could not lead back to its evaluation run."""
+    lineage = registry.build_lineage(registration_inputs)
     assert lineage["evaluation"]["run_id"] == "run-20260101T000000Z-abcdef"
+
+
+def test_register_accepts_matching_files(registration_inputs, tmp_path):
+    path = registry.register(registration_inputs, registry_dir=tmp_path / "registry")
+    entry = json.loads(path.read_text(encoding="utf-8"))
+    manifest = json.loads((registration_inputs / "manifest.json").read_text())
+    assert entry["lineage"]["artifact"]["files_sha256"] == manifest["files_sha256"]
+    assert (path.parent / entry["lineage"]["evaluation"]["result_file"]).is_file()
+
+
+@pytest.mark.parametrize(
+    "name",
+    ["model/config.json", "model/model.safetensors", "upstream-model-card.md"],
+)
+@pytest.mark.parametrize("change", ["missing", "changed"])
+def test_register_rejects_missing_or_changed_files(
+    registration_inputs, tmp_path, name, change
+):
+    file = registration_inputs / name
+    if change == "missing":
+        file.unlink()
+    else:
+        file.write_bytes(b"changed after packaging")
+    registry_dir = tmp_path / "registry"
+
+    with pytest.raises(registry.CannotRegister) as raised:
+        registry.register(registration_inputs, registry_dir=registry_dir)
+
+    assert name in str(raised.value)
+    assert not registry_dir.exists(), "Rejected artifacts must not create an entry"
+
+
+def test_register_rejects_a_directory_in_place_of_a_file(registration_inputs, tmp_path):
+    file = registration_inputs / "model/model.safetensors"
+    file.unlink()
+    file.mkdir()
+    with pytest.raises(registry.CannotRegister, match="model/model.safetensors"):
+        registry.register(registration_inputs, registry_dir=tmp_path / "registry")
+
+
+def test_register_rejects_empty_file_hashes(registration_inputs, tmp_path):
+    path = registration_inputs / "manifest.json"
+    manifest = json.loads(path.read_text())
+    manifest["files_sha256"] = {}
+    path.write_text(json.dumps(manifest))
+    with pytest.raises(registry.CannotRegister, match="file hashes"):
+        registry.register(registration_inputs, registry_dir=tmp_path / "registry")
+
+
+def test_register_rejects_paths_outside_artifact(registration_inputs, tmp_path):
+    outside = tmp_path / "outside.bin"
+    outside.write_bytes(b"outside the artifact")
+    path = registration_inputs / "manifest.json"
+    manifest = json.loads(path.read_text())
+    manifest["files_sha256"]["../outside.bin"] = hashlib.sha256(
+        outside.read_bytes()
+    ).hexdigest()
+    path.write_text(json.dumps(manifest))
+    with pytest.raises(registry.CannotRegister, match="outside"):
+        registry.register(registration_inputs, registry_dir=tmp_path / "registry")

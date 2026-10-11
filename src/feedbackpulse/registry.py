@@ -20,7 +20,7 @@ LOCKFILE = Path("uv.lock")
 
 
 class CannotRegister(RuntimeError):
-    """The lineage does not hold together, so no version may be minted."""
+    """The artifact cannot be registered or served under the claimed version."""
 
 
 def _sha256_file(path: Path) -> str:
@@ -62,6 +62,69 @@ def model_version_for(artifact_id: str, lineage: dict) -> str:
     return f"{artifact_id}-{lineage_digest(lineage)[:8]}"
 
 
+def _verify_artifact_files(artifact_dir: Path, file_hashes: dict) -> None:
+    """Compare actual bytes to the manifest or registry, using the same checks."""
+    if not isinstance(file_hashes, dict) or not file_hashes:
+        raise CannotRegister("no artifact file hashes were recorded")
+    artifact_root = artifact_dir.resolve()
+    for name, expected_hash in file_hashes.items():
+        path = artifact_dir / name
+        if Path(name).is_absolute() or not path.resolve().is_relative_to(artifact_root):
+            raise CannotRegister(f"artifact file {name} points outside the artifact")
+        if not path.is_file():
+            raise CannotRegister(f"artifact file {name} is missing or not a file")
+        try:
+            actual_hash = _sha256_file(path)
+        except OSError as exc:
+            raise CannotRegister(f"could not read artifact file {name}") from exc
+        if actual_hash != expected_hash:
+            raise CannotRegister(
+                f"artifact file {name} does not match its recorded hash"
+            )
+
+
+def verify_model(
+    version: str, model_dir: Path, registry_dir: Path = REGISTRY_DIR
+) -> str:
+    """Verify registered artifact bytes before startup loads them for serving.
+
+    A fresh package may have a different manifest timestamp. Compare the files
+    recorded in the original lineage, not the new package's metadata hash.
+    """
+    if not version or Path(version).name != version or version in {".", ".."}:
+        raise CannotRegister("model version must name a registry entry")
+    entry = load(version, registry_dir=registry_dir)
+    lineage = entry["lineage"]
+    artifact = lineage["artifact"]
+    if (
+        entry["model_version"] != version
+        or model_version_for(artifact["artifact_id"], lineage) != version
+    ):
+        raise CannotRegister("model version does not match the registered lineage")
+
+    # The packaged layout is <artifact>/model, not an arbitrary sibling folder.
+    loadable = artifact["loadable_dir"]
+    if loadable != model_dir.name or len(Path(loadable).parts) != 1:
+        raise CannotRegister(
+            "MODEL_DIR does not match the registered loadable directory"
+        )
+    artifact_dir = model_dir.parent
+    file_hashes = artifact["files_sha256"]
+    _verify_artifact_files(artifact_dir, file_hashes)
+    expected = {name for name in file_hashes if name.startswith(f"{loadable}/")}
+    actual = {
+        path.relative_to(artifact_dir).as_posix()
+        for path in model_dir.rglob("*")
+        if path.is_file()
+    }
+    # An extra tokenizer config or weights file can change what the loader uses.
+    if not expected or actual != expected:
+        raise CannotRegister(
+            "model directory contains files not covered by the registry"
+        )
+    return entry["model_version"]
+
+
 def build_lineage(artifact_dir: Path) -> dict:
     """Collect everything model_version must lead back to, or refuse."""
     code = gitinfo.code_version()
@@ -77,6 +140,7 @@ def build_lineage(artifact_dir: Path) -> dict:
     if not manifest_path.exists():
         raise CannotRegister(f"{manifest_path} is missing; package the artifact first")
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    _verify_artifact_files(artifact_dir, manifest.get("files_sha256"))
 
     if not EVALUATION_RESULT.exists():
         raise CannotRegister(

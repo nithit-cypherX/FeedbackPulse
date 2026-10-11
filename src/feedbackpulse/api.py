@@ -22,6 +22,7 @@ from feedbackpulse.inference import (
     SentimentClassifier,
     TextTooLong,
 )
+from feedbackpulse.registry import verify_model
 
 logger = logging.getLogger("feedbackpulse.api")
 
@@ -73,19 +74,22 @@ def create_app(
         # Startup: attempt to load model if not pre-injected
         if state.classifier is None:
             try:
+                verified_version = verify_model(
+                    state.settings.model_version, state.settings.model_dir
+                )
                 logger.info(
                     "Loading model from %s (version: %s)",
                     state.settings.model_dir,
-                    state.settings.model_version,
+                    verified_version,
                 )
                 state.classifier = SentimentClassifier.load(
                     state.settings.model_dir,
-                    state.settings.model_version,
+                    verified_version,
                 )
                 logger.info("Model loaded successfully")
             except Exception as exc:  # noqa: BLE001
                 # Do not raise: server must start so /health works and /ready fails with 503
-                logger.error("Failed to load model: %s", exc)
+                logger.error("Failed to load model (%s)", type(exc).__name__)
                 state.load_error = str(exc)
         yield
         # Teardown
@@ -103,7 +107,12 @@ def create_app(
     @app.middleware("http")
     async def logging_middleware(request: Request, call_next):
         start_time = time.monotonic()
-        response = await call_next(request)
+        try:
+            response = await call_next(request)
+        except Exception as exc:  # noqa: BLE001
+            # Handle request errors before ServerErrorMiddleware can re-raise
+            # their raw exception/traceback for the ASGI server to log again.
+            response = await unhandled_exception_handler(request, exc)
         duration_ms = (time.monotonic() - start_time) * 1000.0
 
         # Log path, status, and duration without logging headers or body content
@@ -117,7 +126,9 @@ def create_app(
         return response
 
     @app.exception_handler(RequestValidationError)
-    async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    async def validation_exception_handler(
+        request: Request, exc: RequestValidationError
+    ):
         return create_error_response(
             status.HTTP_422_UNPROCESSABLE_ENTITY,
             "INVALID_TEXT",
@@ -136,7 +147,7 @@ def create_app(
 
     @app.exception_handler(Exception)
     async def unhandled_exception_handler(request: Request, exc: Exception):
-        logger.exception("Unexpected error handling %s", request.url.path)
+        logger.error("Unexpected error handling request (%s)", type(exc).__name__)
         return create_error_response(
             status.HTTP_500_INTERNAL_SERVER_ERROR,
             "INTERNAL_ERROR",
@@ -239,8 +250,9 @@ def create_app(
                 "INVALID_TEXT",
                 str(exc),
             )
-        except Exception:
-            logger.exception("Inference failed")
+        except Exception as exc:  # noqa: BLE001
+            # Preserve the 500 contract without logging potentially private exception text.
+            logger.error("Inference failed (%s)", type(exc).__name__)
             return create_error_response(
                 status.HTTP_500_INTERNAL_SERVER_ERROR,
                 "INTERNAL_ERROR",

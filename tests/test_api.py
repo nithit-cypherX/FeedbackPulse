@@ -162,7 +162,13 @@ def test_predict_content_token_boundary(client, shared_classifier):
         "Token secret-test-token",
     ],
 )
-def test_predict_auth_failure_returns_401(client, auth_header):
+def test_predict_auth_failure_returns_401(client, auth_header, monkeypatch):
+    def unexpected_prediction(*args, **kwargs):
+        pytest.fail("An unauthorized request must not call the model")
+
+    monkeypatch.setattr(
+        client.app.state.app_state.classifier, "predict", unexpected_prediction
+    )
     headers = {}
     if auth_header is not None:
         headers["Authorization"] = auth_header

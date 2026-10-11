@@ -23,16 +23,8 @@ def get_default_model_version() -> str:
 
 
 def get_default_model_dir() -> Path:
-    """Resolve the default model directory.
-
-    Prefers the local packaged artifact directory. If not packaged yet,
-    falls back to downloading/locating via huggingface snapshot.
-    """
-    if DEFAULT_ARTIFACT_DIR.is_dir():
-        return DEFAULT_ARTIFACT_DIR
-    from feedbackpulse.model_files import ensure_model_files
-
-    return ensure_model_files()
+    """Return the packaged path; startup handles missing or invalid model files."""
+    return DEFAULT_ARTIFACT_DIR
 
 
 @dataclass(frozen=True)
@@ -50,7 +42,11 @@ def load_settings(environ: dict[str, str] | None = None) -> Settings:
     """Load settings from environment variables or sensible defaults."""
     env = os.environ if environ is None else environ
 
-    service_token = env.get("SERVICE_TOKEN", "test-service-token")
+    service_token = env.get("SERVICE_TOKEN")
+    if not service_token or not service_token.strip():
+        raise ValueError(
+            "SERVICE_TOKEN must be set to a non-empty value before startup"
+        )
 
     model_dir_raw = env.get("MODEL_DIR")
     if model_dir_raw:
