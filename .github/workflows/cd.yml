@@ -162,25 +162,49 @@ jobs:
           set -euo pipefail
           DEPLOY_SHA="${{ github.event.workflow_run.head_sha || github.sha }}"
           export EXPECTED_IMAGE="$AZURE_REGISTRY_SERVER/feedbackpulse:${DEPLOY_SHA}"
-          STATE_JSON=$(az containerapp show -n "$AZURE_CONTAINER_APP_NAME" -g "$AZURE_RESOURCE_GROUP" \
-            --query '{state:properties.provisioningState,latest:properties.latestRevisionName,ready:properties.latestReadyRevisionName,image:properties.template.containers[0].image,traffic:properties.configuration.ingress.traffic}' -o json)
-          export STATE_JSON
           python3 - <<'PY'
           import json
           import os
+          import subprocess
+          import time
 
-          state = json.loads(os.environ["STATE_JSON"])
-          latest = state.get("latest")
-          if state.get("state") != "Succeeded" or not latest or latest != state.get("ready"):
-              raise SystemExit("Deployment failed: the latest revision is not confirmed ready.")
-          if state.get("image") != os.environ["EXPECTED_IMAGE"]:
-              raise SystemExit("Deployment failed: the image does not match the selected commit.")
-          routes = state.get("traffic") or []
-          latest_weight = sum(r.get("weight", 0) for r in routes
-                              if r.get("latestRevision") or r.get("revisionName") == latest)
-          if latest_weight != 100 or sum(r.get("weight", 0) for r in routes) != 100:
-              raise SystemExit("Deployment failed: the latest revision is not receiving all traffic.")
-          print(f"PASS: {latest} is ready, matches the selected commit and receives 100% traffic.")
+          # Azure can accept the update before the new revision is ready. Only poll reads.
+          deadline = time.monotonic() + 300
+          timeout_error = "Deployment verification timed out after 300 seconds waiting for the latest revision."
+          while True:
+              remaining = deadline - time.monotonic()
+              if remaining <= 0:
+                  raise SystemExit(timeout_error)
+              try:
+                  result = subprocess.run(
+                      ["az", "containerapp", "show", "-n", os.environ["AZURE_CONTAINER_APP_NAME"],
+                       "-g", os.environ["AZURE_RESOURCE_GROUP"], "--query",
+                       "{state:properties.provisioningState,latest:properties.latestRevisionName,"
+                       "ready:properties.latestReadyRevisionName,image:properties.template.containers[0].image,"
+                       "traffic:properties.configuration.ingress.traffic}", "-o", "json"],
+                      capture_output=True, text=True, check=True, timeout=min(30, remaining),
+                  )
+              except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
+                  raise SystemExit("Deployment verification failed: could not read Azure state.") from None
+              if time.monotonic() >= deadline:
+                  raise SystemExit(timeout_error)
+              state = json.loads(result.stdout)
+              latest = state.get("latest")
+              if state.get("state") in {"Failed", "Canceled", "Cancelled"}:
+                  raise SystemExit("Deployment failed: Azure reported " + state["state"] + ".")
+              if state.get("image") != os.environ["EXPECTED_IMAGE"]:
+                  raise SystemExit("Deployment failed: the image does not match the selected commit.")
+              if state.get("state") == "Succeeded" and latest and latest == state.get("ready"):
+                  routes = state.get("traffic") or []
+                  latest_weight = sum(r.get("weight", 0) for r in routes
+                                      if r.get("latestRevision") or r.get("revisionName") == latest)
+                  if latest_weight != 100 or sum(r.get("weight", 0) for r in routes) != 100:
+                      raise SystemExit("Deployment failed: the latest revision is not receiving all traffic.")
+                  print(f"PASS: {latest} is ready, matches the selected commit and receives 100% traffic.")
+                  break
+              print(f"Waiting for revision: state={state.get('state')}, latest={latest}, "
+                    f"ready={state.get('ready')}", flush=True)
+              time.sleep(min(10, max(0, deadline - time.monotonic())))
           PY
 
       # --- Smoke Test: "A deploy that is not smoke-tested is a deploy you have not verified." ---
