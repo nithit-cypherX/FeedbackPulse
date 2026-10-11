@@ -28,10 +28,7 @@
 
 FeedbackPulse นำส่งโมเดลและ REST API ในคอนเทนเนอร์เดียวบน **Azure Container Apps**:
 
-- **Resource Group:** `itcs355-6688166` (ภูมิภาค `southeastasia`)
-- **Container Registry (ACR):** `itcs3556688166.azurecr.io` (SKU Basic)
-- **Container Apps Environment:** `itcs355-env` (Consumption plan)
-- **Container App:** `feedbackpulse-api`
+- **ปลายทาง:** ตั้ง Resource Group, ACR, Container Apps Environment และ App ผ่านค่าที่ระบุเองตาม [cloud.env.example](../cloud.env.example) ไม่มี fallback ไป resource ของ deployment เดิม การเตรียมปลายทาง Azure ของผู้ใช้ยังไม่เสร็จ ดู [สถานะ P04](../docs/plans/P04-deployment-and-cicd.md)
 - **Sizing:** 1.0 vCPU / 2.0 GiB RAM (สอดคล้องกับผลวัดใน container ที่ 645.8 MiB และอยู่ในงบประมาณ USD 15)
 - **Scale:** `minReplicas: 0` (scale-to-zero เมื่อ idle), `maxReplicas: 3`
 - **Revisions Mode:** `Multiple` (รองรับ zero-downtime rollback)
@@ -52,8 +49,10 @@ FeedbackPulse นำส่งโมเดลและ REST API ในคอน�
 
 ## 4. นโยบายความปลอดภัยของ Secrets (Zero Leaked Credentials)
 
-- **ไม่มีการ bake secret ลงใน Docker image หรือ Git repository**: `SERVICE_TOKEN` และ ACR credentials จะถูกส่งผ่าน runtime environment variables และ Container App Secrets เท่านั้น
-- ไฟล์ `cloudlayer/containerapp.template.yaml` ใช้ตัวแปร `${VAR_NAME}` และจะถูก render ผ่าน `cloudlayer/render_config.py` ซึ่งจะลบไฟล์ชั่วคราวทิ้งทันทีเมื่อเสร็จสิ้น
+- **ไม่มีการ bake secret ลงใน Docker image หรือ Git repository**: `SERVICE_TOKEN` ต้องตั้งเอง ไม่ใช้ค่าตัวอย่างเดิม; CD รับผ่าน production Environment secret แล้วส่งให้ Container App Secret
+- การดึง image ใช้ user-assigned managed identity ที่กำหนดด้วย `AZURE_REGISTRY_IDENTITY_ID` (resource ID ไม่ใช่ client ID) ต้องเตรียม identity และสิทธิ์ `AcrPull` ก่อน ไม่ใช้ ACR username/password และไม่ต้องเปิด admin account ดู [Microsoft Learn](https://learn.microsoft.com/en-us/azure/container-apps/managed-identity-image-pull)
+- CD ใช้ repository variables `AZURE_RESOURCE_GROUP`, `AZURE_CONTAINER_APP_ENV`, `AZURE_CONTAINER_APP_NAME`, `AZURE_REGISTRY_NAME`, `AZURE_REGISTRY_SERVER`, `AZURE_REGISTRY_IDENTITY_ID`; login ใช้ production secrets `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID` ค่าจำเป็นไม่ครบจะหยุดก่อนขั้นอื่น สวิตช์ `FEEDBACKPULSE_CD_ENABLED` ยังต้องเปิดแยกภายหลัง ไม่ได้เปิดจากการแก้ไฟล์
+- `cloudlayer/render_config.py` render template และตรวจโครงสร้างเท่านั้น ไม่สร้าง identity หรือ role; `make deploy` และ CD เป็นผู้ลบ YAML ชั่วคราวที่มี token หลังใช้งาน การตรวจ `--validate-only` ใช้ค่าจำลอง ไม่ยืนยันสิทธิ์หรือ deployment บน Azure
 
 ---
 

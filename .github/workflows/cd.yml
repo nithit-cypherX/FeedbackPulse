@@ -26,13 +26,13 @@ concurrency:
   group: production-deploy
   cancel-in-progress: false
 
-env: # กำหนดค่า default value ให้กับแต่ละ variable ในกรณีที่ไม่มีการกำหนดค่าใน GitHub Secrets หรือ GitHub Actions Variables (Fallback Value)
-  AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP || 'itcs355-6688166' }}
-  AZURE_LOCATION: ${{ vars.AZURE_LOCATION || 'eastasia' }}
-  AZURE_CONTAINER_APP_ENV: ${{ vars.AZURE_CONTAINER_APP_ENV || 'itcs355-env' }}
-  AZURE_CONTAINER_APP_NAME: ${{ vars.AZURE_CONTAINER_APP_NAME || 'feedbackpulse-api' }}
-  AZURE_REGISTRY_NAME: ${{ vars.AZURE_REGISTRY_NAME || vars.ACR_NAME || 'itcs3556688166' }}
-  AZURE_REGISTRY_SERVER: ${{ vars.AZURE_REGISTRY_SERVER || 'itcs3556688166.azurecr.io' }}
+env: # Explicit repository variables; no fallback to another deployment.
+  AZURE_RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+  AZURE_CONTAINER_APP_ENV: ${{ vars.AZURE_CONTAINER_APP_ENV }}
+  AZURE_CONTAINER_APP_NAME: ${{ vars.AZURE_CONTAINER_APP_NAME }}
+  AZURE_REGISTRY_NAME: ${{ vars.AZURE_REGISTRY_NAME }}
+  AZURE_REGISTRY_SERVER: ${{ vars.AZURE_REGISTRY_SERVER }}
+  AZURE_REGISTRY_IDENTITY_ID: ${{ vars.AZURE_REGISTRY_IDENTITY_ID }}
 
 jobs:
   deploy:
@@ -49,10 +49,35 @@ jobs:
     runs-on: ubuntu-latest
     environment: production # เพื่อให้ GitHub บันทึก Deployment Tracking, แสดง URL ของ Container App และสถานะในหน้าหลักของ Repository
     env:
-      AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID || vars.AZURE_CLIENT_ID }}
+      AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+      AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
     steps:
+      - name: Check required deployment settings
+        id: settings
+        shell: bash
+        env:
+          SERVICE_TOKEN: ${{ secrets.SERVICE_TOKEN }}
+        run: |
+          set -euo pipefail
+          for setting in AZURE_CLIENT_ID AZURE_TENANT_ID AZURE_SUBSCRIPTION_ID \
+            AZURE_RESOURCE_GROUP AZURE_CONTAINER_APP_ENV AZURE_CONTAINER_APP_NAME \
+            AZURE_REGISTRY_NAME AZURE_REGISTRY_SERVER AZURE_REGISTRY_IDENTITY_ID SERVICE_TOKEN; do
+            value="${!setting:-}"
+            if [[ -z "${value//[[:space:]]/}" ]]; then
+              echo "::error::$setting is not configured"
+              exit 1
+            fi
+          done
+          if [[ "$SERVICE_TOKEN" == 'test-service-token-secret-12345' ]]; then
+            echo "::error::SERVICE_TOKEN must not use the old example value"
+            exit 1
+          fi
+
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
 
       - name: Install uv Package Manager
         uses: astral-sh/setup-uv@v5
@@ -84,18 +109,11 @@ jobs:
 
       # --- Azure Login via OIDC (No long-lived keys) -------------------------
       - name: Log in to Azure (OIDC)
-        if: ${{ env.AZURE_CLIENT_ID != '' }}
         uses: azure/login@v2
         with:
-          client-id: ${{ secrets.AZURE_CLIENT_ID || vars.AZURE_CLIENT_ID }}
-          tenant-id: ${{ secrets.AZURE_TENANT_ID || vars.AZURE_TENANT_ID }}
-          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID || vars.AZURE_SUBSCRIPTION_ID }}
-
-      - name: Log in to Azure (Service Principal Fallback)
-        if: ${{ env.AZURE_CLIENT_ID == '' }}
-        uses: azure/login@v2
-        with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
+          client-id: ${{ env.AZURE_CLIENT_ID }}
+          tenant-id: ${{ env.AZURE_TENANT_ID }}
+          subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
 
       - name: Log in to Azure Container Registry (ACR)
         run: az acr login --name "$AZURE_REGISTRY_NAME"
@@ -117,19 +135,18 @@ jobs:
             --push .
 
       - name: Render Container App configuration
+        env:
+          SERVICE_TOKEN: ${{ secrets.SERVICE_TOKEN }}
         run: |
+          set -euo pipefail
           DEPLOY_SHA="${{ github.event.workflow_run.head_sha || github.sha }}"
           MANAGED_ENV_ID=$(az containerapp env show -n "$AZURE_CONTAINER_APP_ENV" -g "$AZURE_RESOURCE_GROUP" --query id -o tsv)
-          REG_PASS=$(az acr credential show -n "$AZURE_REGISTRY_NAME" --query "passwords[0].value" -o tsv)
-          echo "::add-mask::$REG_PASS"
           IMAGE_TAG="$AZURE_REGISTRY_SERVER/feedbackpulse:${DEPLOY_SHA}"
 
           MANAGED_ENV_ID="$MANAGED_ENV_ID" \
-          REGISTRY_PASSWORD="$REG_PASS" \
           REGISTRY_SERVER="$AZURE_REGISTRY_SERVER" \
-          REGISTRY_USERNAME="$AZURE_REGISTRY_NAME" \
+          REGISTRY_IDENTITY_ID="$AZURE_REGISTRY_IDENTITY_ID" \
           IMAGE_TAG="$IMAGE_TAG" \
-          SERVICE_TOKEN="${{ secrets.SERVICE_TOKEN || 'test-service-token-secret-12345' }}" \
           uv run python cloudlayer/render_config.py --output rendered_containerapp.yaml
 
       - name: Deploy revision to Azure Container Apps
@@ -144,9 +161,11 @@ jobs:
 
       # --- Smoke Test: "A deploy that is not smoke-tested is a deploy you have not verified." ---
       - name: Live Smoke Test with Three Known Payloads
+        env:
+          SERVICE_TOKEN: ${{ secrets.SERVICE_TOKEN }}
         run: |
           FQDN=$(az containerapp show -n "$AZURE_CONTAINER_APP_NAME" -g "$AZURE_RESOURCE_GROUP" --query "properties.configuration.ingress.fqdn" -o tsv)
-          TOKEN="${{ secrets.SERVICE_TOKEN || 'test-service-token-secret-12345' }}"
+          TOKEN="$SERVICE_TOKEN"
           echo "Verifying live endpoint at: https://$FQDN"
 
           echo "Polling readiness probe..."

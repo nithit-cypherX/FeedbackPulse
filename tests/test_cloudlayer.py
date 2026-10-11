@@ -7,13 +7,16 @@ Validates:
 """
 
 import json
+import os
 import subprocess
+import sys
 
 import pytest
 
 from cloudlayer.adapter import CloudDeploymentAdapter
 from cloudlayer.azure_adapter import AzureContainerAppAdapter
 from cloudlayer.render_config import (
+    REQUIRED_VARS,
     TEMPLATE_PATH,
     render_containerapp_yaml,
     validate_config_structure,
@@ -21,11 +24,11 @@ from cloudlayer.render_config import (
 
 DUMMY_ENV = {
     "MANAGED_ENV_ID": "/subscriptions/0000/resourceGroups/rg/providers/Microsoft.App/managedEnvironments/env",
-    "SERVICE_TOKEN": "test-service-token-secret-12345",
-    "REGISTRY_SERVER": "itcs3556688166.azurecr.io",
-    "REGISTRY_USERNAME": "itcs3556688166",
-    "REGISTRY_PASSWORD": "dummy-registry-password",
-    "IMAGE_TAG": "itcs3556688166.azurecr.io/feedbackpulse:test-tag",
+    "SERVICE_TOKEN": "renderer-test-token-not-for-deployment",
+    "REGISTRY_SERVER": "example.azurecr.io",
+    "REGISTRY_IDENTITY_ID": "/subscriptions/0000/resourceGroups/rg/providers/"
+    "Microsoft.ManagedIdentity/userAssignedIdentities/pull-identity",
+    "IMAGE_TAG": "example.azurecr.io/feedbackpulse:test-tag",
 }
 
 
@@ -139,7 +142,10 @@ def test_template_file_exists():
 def test_template_no_plaintext_secrets_hardcoded():
     content = TEMPLATE_PATH.read_text(encoding="utf-8")
     assert "${SERVICE_TOKEN}" in content
-    assert "${REGISTRY_PASSWORD}" in content
+    assert "${REGISTRY_IDENTITY_ID}" in content
+    assert "REGISTRY_PASSWORD" not in content
+    assert "passwordSecretRef" not in content
+    assert "acr-password" not in content
     # Ensure no accidentally hardcoded credentials
     assert "ghp_" not in content
     assert "eyJ" not in content
@@ -155,7 +161,15 @@ def test_render_containerapp_yaml_valid():
     secrets = parsed["properties"]["configuration"]["secrets"]
     secret_map = {s["name"]: s["value"] for s in secrets}
     assert secret_map["service-token"] == DUMMY_ENV["SERVICE_TOKEN"]
-    assert secret_map["acr-password"] == DUMMY_ENV["REGISTRY_PASSWORD"]
+    assert set(secret_map) == {"service-token"}
+    assert parsed["identity"] == {
+        "type": "UserAssigned",
+        "userAssignedIdentities": {DUMMY_ENV["REGISTRY_IDENTITY_ID"]: {}},
+    }
+    assert parsed["properties"]["configuration"]["registries"] == [{
+        "server": DUMMY_ENV["REGISTRY_SERVER"],
+        "identity": DUMMY_ENV["REGISTRY_IDENTITY_ID"],
+    }]
 
 
 def test_infra_sizing_constraints():
@@ -185,12 +199,83 @@ def test_infra_probe_endpoints():
     assert probe_map["Readiness"]["httpGet"]["port"] == 8000
 
 
-def test_infra_missing_required_env_raises():
+@pytest.mark.parametrize("setting", REQUIRED_VARS)
+@pytest.mark.parametrize("value", [None, "", " \t"])
+def test_infra_missing_required_env_raises(setting, value):
     incomplete_env = dict(DUMMY_ENV)
-    del incomplete_env["SERVICE_TOKEN"]
+    if value is None:
+        del incomplete_env[setting]
+    else:
+        incomplete_env[setting] = value
 
     with pytest.raises(ValueError, match="Missing required environment variables"):
         render_containerapp_yaml(incomplete_env)
+
+
+def test_renderer_rejects_old_example_token():
+    with pytest.raises(ValueError, match="old example value"):
+        render_containerapp_yaml({**DUMMY_ENV, "SERVICE_TOKEN": "test-service-token-secret-12345"})
+
+
+@pytest.mark.parametrize("identity", ["client-id", "system", "/subscriptions/sub/resourceGroups/rg"])
+def test_renderer_rejects_invalid_identity_resource_id(identity):
+    with pytest.raises(ValueError, match="user-assigned identity resource ID"):
+        render_containerapp_yaml({**DUMMY_ENV, "REGISTRY_IDENTITY_ID": identity})
+
+
+def test_renderer_accepts_azure_registry_variable_names():
+    env = dict(DUMMY_ENV)
+    env["AZURE_REGISTRY_SERVER"] = env.pop("REGISTRY_SERVER")
+    env["AZURE_REGISTRY_IDENTITY_ID"] = env.pop("REGISTRY_IDENTITY_ID")
+    _, parsed = render_containerapp_yaml(env)
+    assert parsed["properties"]["configuration"]["registries"][0]["identity"] == (
+        DUMMY_ENV["REGISTRY_IDENTITY_ID"]
+    )
+
+
+@pytest.mark.parametrize("token", ['token-"quoted"', r"token-\backslash", "token\nsecond-line",
+                                   "literal-${IMAGE_TAG}-token", "$(do-not-execute)"])
+def test_renderer_preserves_token_as_data(token):
+    _, parsed = render_containerapp_yaml({**DUMMY_ENV, "SERVICE_TOKEN": token})
+    assert parsed["properties"]["configuration"]["secrets"] == [
+        {"name": "service-token", "value": token}
+    ]
+
+
+@pytest.mark.parametrize("change", ["missing-attachment", "different-identity", "password"])
+def test_validation_rejects_invalid_registry_authentication(change):
+    _, parsed = render_containerapp_yaml(DUMMY_ENV)
+    registry = parsed["properties"]["configuration"]["registries"][0]
+    if change == "missing-attachment":
+        parsed.pop("identity")
+    elif change == "different-identity":
+        registry["identity"] = DUMMY_ENV["REGISTRY_IDENTITY_ID"] + "-other"
+    else:
+        registry["passwordSecretRef"] = "acr-password"
+    with pytest.raises(ValueError, match="identity"):
+        validate_config_structure(parsed)
+
+
+def test_renderer_cli_masks_token_in_stdout():
+    token = 'sensitive-"quoted"-tail-${IMAGE_TAG}'
+    result = subprocess.run(
+        [sys.executable, str(TEMPLATE_PATH.with_name("render_config.py"))],
+        env={**os.environ, **DUMMY_ENV, "SERVICE_TOKEN": token},
+        capture_output=True, text=True, check=False,
+    )
+    assert result.returncode == 0, result.stderr
+    assert "***MASKED***" in result.stdout
+    assert "sensitive-" not in result.stdout + result.stderr
+    assert "quoted" not in result.stdout + result.stderr
+
+
+def test_renderer_validation_only_needs_no_azure_settings():
+    result = subprocess.run(
+        [sys.executable, str(TEMPLATE_PATH.with_name("render_config.py")), "--validate-only"],
+        env={}, capture_output=True, text=True, check=False,
+    )
+    assert result.returncode == 0, result.stderr
+    assert "PASSED" in result.stdout
 
 
 def test_validation_rejects_invalid_sizing():

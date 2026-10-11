@@ -1,12 +1,13 @@
 """Configuration renderer and validator for Azure Container Apps.
 
-Reads infra/containerapp.template.yaml and substitutes environment variables
+Reads cloudlayer/containerapp.template.yaml and substitutes environment variables
 while strictly validating required parameters, resource boundaries, and probe paths.
 """
 
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import re
 import sys
@@ -21,8 +22,7 @@ REQUIRED_VARS = [
     "MANAGED_ENV_ID",
     "SERVICE_TOKEN",
     "REGISTRY_SERVER",
-    "REGISTRY_USERNAME",
-    "REGISTRY_PASSWORD",
+    "REGISTRY_IDENTITY_ID",
     "IMAGE_TAG",
 ]
 
@@ -36,6 +36,19 @@ def validate_config_structure(config: dict[str, Any]) -> None:
     configuration = properties.get("configuration")
     if not isinstance(configuration, dict):
         raise TypeError("Missing 'properties.configuration' block")
+
+    identity = config.get("identity", {})
+    assigned = identity.get("userAssignedIdentities", {})
+    registries = configuration.get("registries", [])
+    if identity.get("type") != "UserAssigned" or not assigned:
+        raise ValueError("A user-assigned registry identity must be attached to the app")
+    if not registries or any(
+        registry.get("identity") not in assigned
+        or "username" in registry
+        or "passwordSecretRef" in registry
+        for registry in registries
+    ):
+        raise ValueError("Registry authentication must use the attached managed identity")
 
     # Ingress checks
     ingress = configuration.get("ingress", {})
@@ -89,22 +102,35 @@ def render_containerapp_yaml(
     env = dict(env_vars)
     if "REGISTRY_SERVER" not in env and "AZURE_REGISTRY_SERVER" in env:
         env["REGISTRY_SERVER"] = env["AZURE_REGISTRY_SERVER"]
-    if "REGISTRY_USERNAME" not in env and "AZURE_REGISTRY_NAME" in env:
-        env["REGISTRY_USERNAME"] = env["AZURE_REGISTRY_NAME"]
-    if "REGISTRY_PASSWORD" not in env and "AZURE_REGISTRY_PASSWORD" in env:
-        env["REGISTRY_PASSWORD"] = env["AZURE_REGISTRY_PASSWORD"]
+    if "REGISTRY_IDENTITY_ID" not in env and "AZURE_REGISTRY_IDENTITY_ID" in env:
+        env["REGISTRY_IDENTITY_ID"] = env["AZURE_REGISTRY_IDENTITY_ID"]
 
     raw_template = template_path.read_text(encoding="utf-8")
 
     # Check for missing variables unless placeholders are explicitly allowed
-    missing = [var for var in REQUIRED_VARS if not env.get(var)]
+    missing = [var for var in REQUIRED_VARS if not env.get(var, "").strip()]
     if missing and not allow_placeholders:
         raise ValueError(f"Missing required environment variables for rendering: {', '.join(missing)}")
 
-    rendered = raw_template
-    for var in REQUIRED_VARS:
-        val = env.get(var, f"${{{var}}}")
-        rendered = rendered.replace(f"${{{var}}}", val)
+    if env.get("SERVICE_TOKEN") == "test-service-token-secret-12345":
+        raise ValueError("SERVICE_TOKEN must not use the old example value")
+    registry_identity = env.get("REGISTRY_IDENTITY_ID", "")
+    if registry_identity and not re.fullmatch(
+        r"/subscriptions/[^/\s]+/resourceGroups/[^/\s]+/providers/"
+        r"Microsoft\.ManagedIdentity/userAssignedIdentities/[^/\s]+",
+        registry_identity,
+        flags=re.IGNORECASE,
+    ):
+        raise ValueError("REGISTRY_IDENTITY_ID must be a user-assigned identity resource ID")
+
+    # Replace quoted YAML scalars once: quotes/newlines in a token remain data,
+    # and a token containing another placeholder is not substituted a second time.
+    pattern = r'"\$\{(' + "|".join(REQUIRED_VARS) + r')\}"'
+    rendered = re.sub(
+        pattern,
+        lambda match: json.dumps(env.get(match[1], f"${{{match[1]}}}")),
+        raw_template,
+    )
 
     parsed = yaml.safe_load(rendered)
     validate_config_structure(parsed)
@@ -128,10 +154,10 @@ def main() -> int:
         dummy_vars = {
             "MANAGED_ENV_ID": "/subscriptions/sub/resourceGroups/rg/providers/Microsoft.App/managedEnvironments/env",
             "SERVICE_TOKEN": "dummy-token-for-validation",
-            "REGISTRY_SERVER": "itcs3556688166.azurecr.io",
-            "REGISTRY_USERNAME": "itcs3556688166",
-            "REGISTRY_PASSWORD": "dummy-password",
-            "IMAGE_TAG": "itcs3556688166.azurecr.io/feedbackpulse:test",
+            "REGISTRY_SERVER": "example.azurecr.io",
+            "REGISTRY_IDENTITY_ID": "/subscriptions/sub/resourceGroups/rg/providers/"
+            "Microsoft.ManagedIdentity/userAssignedIdentities/pull-identity",
+            "IMAGE_TAG": "example.azurecr.io/feedbackpulse:test",
         }
         try:
             render_containerapp_yaml(dummy_vars)
@@ -153,8 +179,11 @@ def main() -> int:
         print(f"Rendered configuration written to {args.output}")
     else:
         # Mask secrets before printing to stdout
-        masked = re.sub(r'(value:\s*)"([^"]+)"', r'\1"***MASKED***"', rendered_content)
-        print(masked)
+        masked = yaml.safe_load(rendered_content)
+        for secret in masked["properties"]["configuration"].get("secrets", []):
+            if "value" in secret:
+                secret["value"] = "***MASKED***"
+        print(yaml.safe_dump(masked, sort_keys=False))
 
     return 0
 

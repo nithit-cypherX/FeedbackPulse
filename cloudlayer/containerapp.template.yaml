@@ -3,6 +3,10 @@
 # NOTE: Zero plaintext secrets are stored in this file.
 # Values marked with ${VAR_NAME} are injected dynamically at provisioning time.
 
+identity:
+  type: UserAssigned
+  userAssignedIdentities:
+    "${REGISTRY_IDENTITY_ID}": {}
 properties:
   managedEnvironmentId: "${MANAGED_ENV_ID}"
   configuration:
@@ -15,12 +19,9 @@ properties:
     secrets:
       - name: service-token
         value: "${SERVICE_TOKEN}"
-      - name: acr-password
-        value: "${REGISTRY_PASSWORD}"
     registries:
       - server: "${REGISTRY_SERVER}"
-        username: "${REGISTRY_USERNAME}"
-        passwordSecretRef: acr-password
+        identity: "${REGISTRY_IDENTITY_ID}"
   template:
     containers:
       - name: feedbackpulse-api

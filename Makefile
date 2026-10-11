@@ -80,18 +80,16 @@ dry-run: validate-config
 
 deploy: validate-config
 	@set -e; \
-	if [ -z "$(AZURE_CONTAINER_APP_NAME)" ] || [ -z "$(AZURE_RESOURCE_GROUP)" ]; then \
-		echo "Error: AZURE_CONTAINER_APP_NAME and AZURE_RESOURCE_GROUP must be set in cloud.env"; exit 1; \
-	fi; \
-	echo "Resolving Azure Environment & Registry credentials..."; \
-	MANAGED_ENV_ID=$$(az containerapp env show -n $(AZURE_CONTAINER_APP_ENV) -g $(AZURE_RESOURCE_GROUP) --query id -o tsv); \
-	REG_PASS=$$(az acr credential show -n $(AZURE_REGISTRY_NAME) --query "passwords[0].value" -o tsv); \
+	: "$${AZURE_CONTAINER_APP_NAME:?must be set}" "$${AZURE_RESOURCE_GROUP:?must be set}" \
+	  "$${AZURE_CONTAINER_APP_ENV:?must be set}" "$${AZURE_REGISTRY_SERVER:?must be set}" \
+	  "$${AZURE_REGISTRY_IDENTITY_ID:?must be set}" "$${IMAGE_TAG:?must be set}" "$${SERVICE_TOKEN:?must be set}"; \
+	echo "Resolving Azure Environment; using the configured registry identity..."; \
+	MANAGED_ENV_ID=$$(az containerapp env show -n "$$AZURE_CONTAINER_APP_ENV" -g "$$AZURE_RESOURCE_GROUP" --query id -o tsv); \
 	TEMP_YAML=$$(mktemp cloudlayer/containerapp.render.XXXXXX.yaml); \
 	trap 'rm -f "$$TEMP_YAML"' EXIT INT TERM; \
 	MANAGED_ENV_ID="$$MANAGED_ENV_ID" \
-	REGISTRY_PASSWORD="$$REG_PASS" \
-	REGISTRY_SERVER="$(AZURE_REGISTRY_SERVER)" \
-	REGISTRY_USERNAME="$(AZURE_REGISTRY_NAME)" \
+	REGISTRY_SERVER="$$AZURE_REGISTRY_SERVER" \
+	REGISTRY_IDENTITY_ID="$$AZURE_REGISTRY_IDENTITY_ID" \
 	$(UV) run python cloudlayer/render_config.py --output "$$TEMP_YAML"; \
 	if az containerapp show -n $(AZURE_CONTAINER_APP_NAME) -g $(AZURE_RESOURCE_GROUP) >/dev/null 2>&1; then \
 		echo "Updating existing Container App '$(AZURE_CONTAINER_APP_NAME)'..."; \
