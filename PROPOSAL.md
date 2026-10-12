@@ -76,8 +76,8 @@ costs will be checked during implementation.
 
 ## 7. Team responsibilities
 
-- Model integration and evaluation: **[Name]**
-- API, deployment, and CI/CD: **[Name]**
-- Monitoring, failure demonstration, and cost documentation: **[Name]**
+- Model integration and evaluation: **Jinnapat Jaiphoom**
+- API, deployment, and CI/CD: **Supawit Sirikulpiboon and Nithit Teeraworawit**
+- Monitoring, failure demonstration, and cost documentation: **Nithit Teeraworawit**
 
 Responsibilities may be shared between members.
