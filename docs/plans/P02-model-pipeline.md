@@ -1,12 +1,14 @@
 # P02 — Reproducible model pipeline
 
-- **Original handoff status: `done`** — all 11 tasks were reported complete on 2026-10-07. Evaluation used shared inference at handoff, but **the API side still needed checking in P03**, since no endpoint existed then. The later acceptance review was not yet closed; see below.
+- **Status: `done`** for the P02 delivery and reviewed fixes. All 11 tasks were originally reported complete on 2026-10-07. Later [P03 checks](P03-local-backend.md#check-docker-for-the-latest-code-locally--2026-10-10) verified the real-model/API integration and container, after which the user approved returning to P04. Original P02 measurements and their limits are unchanged.
 - Owner: Person 1 — Model and evaluation.
 - Main plan: [Overview](../../overview-plan.md) · Scope: [Proposal](../../PROPOSAL.md) · Required agreements: [P01-T02 API contract](P01-T02-api-contract.md) · [P01-T03 System structure](P01-T03-system-structure.md).
 
 **Evidence for the whole phase is in one file:** [P02 evidence](../../reports/P02-evidence.md)—reproduction steps, evaluation, versions/hashes, run IDs, lineage, RAM/loading measurements and limitations. This plan holds **task status, locked decisions and ownership boundaries**, without repeating result tables.
 
 ## Review fixes — 2026-10-10
+
+This entry records the state at that review step. The verification and P04 pause mentioned below were resolved later through the linked P03 checks; they are not current submission blockers.
 
 - The user approved two fixes only: **T05**, correct the reversed confusion-matrix explanation (`neutral` → `positive` is 547, not 218) without changing scores; and **T07**, check that manifest files exist and their SHA-256 matches before registration. On a mismatch, stop, name the file and do not create a registry entry.
 - Added small-fixture tests in `tests/test_registry.py`: complete files pass; missing/changed files, a directory in place of a file, an empty hash list and paths outside the artifact are rejected. Before the fix, 9 invalid cases were accepted. After the fix, **33 tests passed** across `test_evaluation.py`, `test_gitinfo.py` and `test_registry.py`; `ruff check` passed on the two changed code files.
@@ -23,7 +25,7 @@
 
 - API endpoints `/predict`, `/health` and `/ready` → P03. However, **the module that loads the model and predicts belongs to P02**; see section 4.
 - Azure resources, `Dockerfile` and CI/CD → P03–P04.
-- Dashboard, alerts and failure demonstration → P05.
+- Dashboard and alerts → P05. The originally planned new failure/recovery experiment was later canceled by the user; see the [approved P05 scope](../../overview-plan.md#p05--local-demo-and-small-monitoring-setup-approved-scope-2026-10-11).
 - **No training or fine-tuning**, following [Proposal §2](../../PROPOSAL.md#2-model-and-dataset).
 
 **Sources:** Use only the links in [Proposal §2](../../PROPOSAL.md#2-model-and-dataset), not mirrors or similarly named repos.
@@ -61,7 +63,7 @@ All tasks were marked `done` in the original handoff. Evidence is in the listed 
 
 | Topic | Locked decision | Applies to |
 |---|---|---|
-| **Text-length limit** | **510 content tokens**, or 512 with special tokens; count with the tokenizer, **not characters**. See [P01-T02 §7](P01-T02-api-contract.md#7-open-points-and-handoff). | P03 |
+| **Text-length limit** | **510 content tokens**, or 512 with special tokens; count with the tokenizer, **not characters**. See [P01-T02 §7](P01-T02-api-contract.md#7-decisions-and-original-handoff). | P03 |
 | **Inference interface** | Call `SentimentClassifier.load()` once at process startup, then `predict()` per request. `ModelNotReady` → `503`; `InvalidText`/`TextTooLong` → `422`. **Do not call the tokenizer or model separately.** | P03 |
 | **`model_version`** | `sentiment-<artifact_id>-<lineage digest>`. P03 reads it from the registry entry or configuration, not a hardcoded value. **A new evaluation run changes this value; update deployed configuration too.** See [report section 5](../../reports/P02-evidence.md). | P03–P04 |
 | **Artifact storage** | **Include it in the image at build time**, without separate blob storage. This keeps the binding claimed by `model_version` intact; runtime replacement would make it unenforced. See [report section 7](../../reports/P02-evidence.md) for the A/B comparison. | P03–P04 |
@@ -70,7 +72,7 @@ All tasks were marked `done` in the original handoff. Evidence is in the listed 
 | **Repeat-evaluation tolerance** | On the same platform and `uv.lock`, **every metric and `predictions_sha256` must match bit-for-bit**. **No cross-platform tolerance is set without evidence.** | P04 (CI) |
 | **Main metric** | **Macro-F1**, not accuracy, because classes are imbalanced; measured proportions are in the report. | P04 |
 
-**P02 informs but does not own:** Model delivery into the container, CPU/RAM, and process/instance counts belong to P03–P04 under [P01-T03 §12](P01-T03-system-structure.md#12-open-decisions-and-next-steps). [Proposal §6](../../PROPOSAL.md#6-cost-estimate) assumed 2 vCPU / 4 GiB, leaving room above P02's measurements. **If reducing size to save money, do not go below roughly 1 GiB without testing.**
+**P02 informs but does not own:** Model delivery into the container, CPU/RAM, and process/instance counts belong to P03–P04 under [P01-T03 §12](P01-T03-system-structure.md#12-decisions-at-the-original-handoff). [Proposal §6](../../PROPOSAL.md#6-cost-estimate) assumed 2 vCPU / 4 GiB, leaving room above P02's measurements. **If reducing size to save money, do not go below roughly 1 GiB without testing.**
 
 ---
 

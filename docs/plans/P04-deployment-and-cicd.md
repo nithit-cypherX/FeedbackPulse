@@ -1,14 +1,17 @@
 # P04 — Deploy and release versions safely (Deployment & CI/CD)
 
-- **Status:** `in_progress` — Fixed the bounded readiness wait. CI #11 and CD #9 passed, including smoke tests. Revision `0000002` is Healthy/Running with 100% traffic, and API checks passed 6/6. No roles/resources were added; P05–P06 had not started at this handoff.
+- **Status:** `done` within the accepted P04 scope: the team's East Asia latency/rollback evidence plus the verified Malaysia West CD fix. CI #11 and CD #9 passed on 2026-10-11, including smoke tests and later API checks (6/6). The user accepted this scope and continued to P05–P06; latency/rollback were not repeated in Malaysia West.
+- **Release setting checked on 2026-10-12:** CD is paused with `FEEDBACKPULSE_CD_ENABLED=false`. The documentation push `3c428ec` passed [CI #13](https://github.com/nithit-cypherX/FeedbackPulse/actions/runs/38212947323), and [CD #11](https://github.com/nithit-cypherX/FeedbackPulse/actions/runs/38213177775) was skipped. No new deployment. This is not a fresh Azure service-status check.
 - **Owner:** Person 2 — Backend and deployment
 - **Main plan:** [Overview](../../overview-plan.md) · **Scope:** [Proposal](../../PROPOSAL.md) · **Course criterion:** **R2 (Deployment & CI/CD)**
 - **Agreed requirements:** [P01-T02 API contract](P01-T02-api-contract.md) · [P01-T03 System structure](P01-T03-system-structure.md) · [P02 Model pipeline](P02-model-pipeline.md) · [P03 Local backend](P03-local-backend.md)
 - **Evidence deliverable:** `reports/P04-evidence.md`
 
+The dated records below preserve earlier failures, approvals and handoffs. Their next steps and uncommitted-file notes describe those moments, not today's task list. The original phase plan is kept below them for reference.
+
 **Handoff note, 2026-10-10:** [CD run #4](https://github.com/nithit-cypherX/FeedbackPulse/actions/runs/38048373569) failed at login, so automated CD in T03 was not yet confirmed. The table/checklist below retain the original report for comparison, not the latest verified CD result. Other manual-deployment evidence must be assessed separately. When work paused, no identity, permission/GitHub configuration change or deployment had been made.
 
-## Latest handoff — wait for revision readiness before passing CD — 2026-10-11
+## Deployment history — wait for revision readiness before passing CD — 2026-10-11
 
 - **Scope:** The user approved only a deadline-based revision wait, tests, commit/push for the next CD run and screenshots. No new permissions/resources, P01–P03 or Makefile changes, or actions in the teammate's Azure account.
 - **Fix:** `Verify deployed revision` polls every 10 seconds for up to 300 seconds using a monotonic deadline. Each read is limited to 30 seconds or the remaining time. It does not redeploy. Failed/Canceled states, read errors, a wrong image SHA or a ready revision without full traffic fail the check. Succeeded, latest=ready and 100% traffic are still required before smoke tests.
@@ -18,7 +21,7 @@
 - **Evidence for the fix:** At 12:38:28, 12:38:39 and 12:38:50 UTC, latest was `0000002` but ready was `0000001`, so the check kept waiting. At 12:39:01 UTC it confirmed the new ready revision, matching SHA and 100% traffic, then ran smoke tests, which passed at 12:39:06 UTC. Verification took about **34 seconds**, within the 5-minute deadline.
 - **Read-back after CD:** At 12:40 UTC, the App was Succeeded/Running, latest=ready=`feedbackpulse-api--0000002`, the revision was Provisioned/Healthy/Running, and both App/revision image tags matched `8d3964c79c1266315fd39e60f4088daa8aa3fda5`. Traffic was 100% to latest. Extra HTTP checks with TLS verification/no redirects passed **6/6**: health 200, ready 200, no token 401 and positive/negative/neutral predictions 200 with expected labels/model version. This was a post-deployment check, not another deployment.
 - **Screenshots:** [CI #11 Success](../../reports/screenshots/p04-readiness-wait-ci-success-2026-10-11.jpg), [CD #9 Success](../../reports/screenshots/p04-readiness-wait-cd-success-2026-10-11.jpg), [revision 0000002 Running](../../reports/screenshots/p04-readiness-wait-revision-running-2026-10-11.jpg). Real browser captures were copied into reports and their hashes compared. Images/plan notes remained local, not committed/pushed.
-- **Handoff:** The readiness-wait bug is fixed and this CD run passed. The CD switch remains true. No roles/resources or secrets changed. Node/Ubuntu workflow warnings were outside scope. A successful CD run alone does not close the whole P04 phase; P05–P06 had not started at this point.
+- **Handoff at the time:** The readiness-wait bug was fixed and this CD run passed. The CD switch was still true at that handoff; it was paused on 2026-10-12 as recorded above. No roles/resources or secrets changed in this fix. Node/Ubuntu workflow warnings were outside scope. P04 acceptance and the move to P05–P06 happened after this handoff.
 
 ## History — enable live CD — 2026-10-11
 
@@ -230,6 +233,8 @@
 
 ## 1. Scope and goal
 
+Sections 1–4 preserve the original phase plan. They are not a new work queue; use the current status above and linked evidence for the accepted scope and results.
+
 ### Expected result
 Cloud deployment on **Azure Container Apps (Consumption plan)** with **GitHub Actions CI/CD** that tests code before deployment, handles secrets safely, meets the performance target in [Proposal §3](../../PROPOSAL.md#3-serving-pattern-and-requirements) and can **roll back** to a previous version when something goes wrong. This addresses course criterion **R2**.
 
@@ -258,7 +263,7 @@ Cloud deployment on **Azure Container Apps (Consumption plan)** with **GitHub Ac
 
 ### Outside P04
 - Dashboard and alert setup (P05).
-- Cloud failure simulation (Planned Failure in P05).
+- Cloud failure simulation (originally planned for P05; the user later canceled the new experiment and chose existing evidence instead).
 - Complete model card and demo rehearsal (P06).
 
 ---

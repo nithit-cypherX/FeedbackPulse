@@ -1,5 +1,7 @@
 # FeedbackPulse — Capstone Proposal
 
+**Original proposal:** This records the initial scope, not today's task status. The later approved scope adds a localhost demo and uses existing failure/rollback evidence instead of a new P05 incident drill. See the [current overview](overview-plan.md) and [submission notes](README.md#submission-status-and-presentation-notes). The original plan below is kept for reference, not presented as completed experiments.
+
 **Team:** 3D team 
 6688033 Jinnapat Jaiphoom
 6688124 Nithit Teeraworawit
@@ -52,6 +54,8 @@ Deliverables include rollback and teardown instructions, a reproducible README,
 a one-page model card, and cost per 1,000 predictions.
 
 ## 5. Planned failure
+
+**Scope update — 11 October 2026:** The user canceled the new P05 failure/recovery experiment. The presentation uses the separate P03 missing-model test and P04 rollback evidence in the [failure story](README.md#failure-story-model-unavailable-and-rollback). The traffic alert tested request volume, not model-loading failure. The paragraph below is the original experiment plan.
 
 In a test deployment, we will make the model artifact unavailable. The service
 should fail its readiness check, avoid misleading predictions, and trigger an

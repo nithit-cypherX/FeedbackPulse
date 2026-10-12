@@ -28,7 +28,7 @@ Follows [docs/plans/P01-T03-system-structure.md §4 and §6](../docs/plans/P01-T
 
 FeedbackPulse packages the model and REST API in one container on **Azure Container Apps**:
 
-- **Target:** explicitly set the Resource Group, ACR, Container Apps Environment and App using [cloud.env.example](../cloud.env.example). `make deploy` and CD require explicit deployment settings. The Malaysia West deployment passed CI #11/CD #9 and post-deployment checks on 11 October 2026; see the [recorded P04 result](../docs/plans/P04-deployment-and-cicd.md#latest-handoff--wait-for-revision-readiness-before-passing-cd--2026-10-11). This is dated evidence, not a live service-status check. Older operational scripts can still have East Asia defaults; check their targets before use.
+- **Target:** explicitly set the Resource Group, ACR, Container Apps Environment and App using [cloud.env.example](../cloud.env.example). `make deploy` and CD require explicit deployment settings. The Malaysia West deployment passed CI #11/CD #9 and post-deployment checks on 11 October 2026; see the [recorded P04 result](../docs/plans/P04-deployment-and-cicd.md#deployment-history--wait-for-revision-readiness-before-passing-cd--2026-10-11). This is dated evidence, not a live service-status check. Older operational scripts can still have East Asia defaults; check their targets before use.
 - **Sizing:** 1.0 vCPU / 2.0 GiB RAM, based on the 645.8 MiB container measurement and USD 15 budget.
 - **Scale:** `minReplicas: 0` (scale to zero when idle), `maxReplicas: 3`.
 - **Revisions Mode:** `Multiple`, for zero-downtime rollback.

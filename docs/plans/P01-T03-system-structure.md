@@ -1,8 +1,10 @@
 # P01-T03 — System Structure
 
-Updated: 2026-10-05
+Original planning record: 2026-10-05, with the P02 handoff added on 2026-10-07.
 
 Main plan: [Overview plan](../../overview-plan.md) · Project scope: [Proposal](../../PROPOSAL.md) · API contract: [P01-T02](P01-T02-api-contract.md)
+
+**How to read this record:** This preserves the agreed design and decisions at the P01–P02 handoff. Statements about work not yet implemented refer to that stage. Later implementation and verification are recorded in [P03](P03-local-backend.md) and [P04](P04-deployment-and-cicd.md); current submission status is in the [README](../../README.md#submission-status-and-presentation-notes).
 
 ## 1. Agreed status and scope
 
@@ -144,7 +146,7 @@ For R1, we reproduce the workflow that uses a pretrained model. We do not claim 
 - **Secrets:** Check both Git history and the Docker image for credentials. Having `.gitignore` is not enough.
 - **Reproduction:** The README must explain how to obtain data/model files and what access is needed, without relying on developer-only files.
 - **Teardown:** Provide removal steps and evidence of the state after actual cleanup when usage ends, not just a written command.
-- **Values to check in P02:** ~~Text limit and tolerance~~ → **checked on 2026-10-07**. The limit is 510 content tokens, or 512 with special tokens; see [P01-T02 §7](P01-T02-api-contract.md#7-open-points-and-handoff) and [evidence, section 3](../../reports/P02-evidence.md). Repeat-evaluation tolerance came from 6 measured runs; see [evidence, section 2](../../reports/P02-evidence.md). The rule against guessing measured values still applies to future checks.
+- **Values to check in P02:** ~~Text limit and tolerance~~ → **checked on 2026-10-07**. The limit is 510 content tokens, or 512 with special tokens; see [P01-T02 §7](P01-T02-api-contract.md#7-decisions-and-original-handoff) and [evidence, section 3](../../reports/P02-evidence.md). Repeat-evaluation tolerance came from 6 measured runs; see [evidence, section 2](../../reports/P02-evidence.md). The rule against guessing measured values still applies to future checks.
 
 ## 11. Keep evidence short and checkable
 
@@ -156,19 +158,19 @@ Save useful summaries in `reports/` after real experiments, and link them from t
 
 One experiment may support several criteria. For example, a model-loading failure could show both the R3 alert and R4 recovery. Do not repeat an incident only to split its reports.
 
-## 12. Open decisions and next steps
+## 12. Decisions at the original handoff
 
-Wait for model inspection and experiments before fixing these details. **The first item was resolved in P02**; the other items remained open in this record:
+At this handoff, the first item had been resolved in P02 and the others were assigned to P03–P04. This list is historical, not work still waiting to start. Later container and cloud decisions are recorded in the [P03 plan](P03-local-backend.md) and [P04 plan](P04-deployment-and-cicd.md).
 
 - ~~Shared model artifact storage~~ → **decided on 2026-10-07: put the artifact in the container image at build time, without separate blob storage**. This keeps the binding claimed by `model_version` true: replacing an artifact at runtime would leave that binding unenforced. It also makes rollback one operation. See [P02 evidence, section 7](../../reports/P02-evidence.md).
 - How to bring model files into the container, such as including them at build time or downloading at startup.
 - CPU and RAM allocation.
 - Process and instance counts.
 
-The text limit is recorded in [P01-T02 section 7](P01-T02-api-contract.md#7-open-points-and-handoff) instead of duplicating its status here.
+The text limit is recorded in [P01-T02 section 7](P01-T02-api-contract.md#7-decisions-and-original-handoff) instead of duplicating its status here.
 
 **Handoff:** **P02 was completed**, and a teammate would take P03 next, as recorded in the [overview](../../overview-plan.md). P02 filled in the values left open by P01—text limit, tolerance and artifact storage—and recorded evidence for the team, without starting P03.
 
-The remaining decisions belong to P03–P04. [P02 evidence, section 6](../../reports/P02-evidence.md) reports peak RSS of **783 MiB** for maximum-length API inputs, **not the 341 MiB measured after loading**. This is the maximum across 10 boundary-length samples; use the maximum, not the median. **These measurements were on macOS, not in a container, and need rechecking before a sizing decision.** P02 did not provide CPU, process-count or instance-count measurements.
+The decisions were handed to P03–P04 with this warning: [P02 evidence, section 6](../../reports/P02-evidence.md) reports peak RSS of **783 MiB** for maximum-length API inputs, **not the 341 MiB measured after loading**. This is the maximum across 10 boundary-length samples; use the maximum, not the median. **These measurements were on macOS, not in a container, so they did not establish container sizing.** Later container checks are in the [P03 review](P03-local-backend.md#check-docker-for-the-latest-code-locally--2026-10-10). P02 itself did not provide CPU, process-count or instance-count measurements.
 
 All three P01-T03 planning decisions were agreed. Overall P01 status and open work remain in the [overview](../../overview-plan.md). This record does not automatically authorize implementation, cloud resource creation or commit/push.

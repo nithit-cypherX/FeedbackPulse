@@ -2,6 +2,8 @@
 
 This report records **actual P02 runs and measurements**. Agreements and task status are in the [phase plan](../docs/plans/P02-model-pipeline.md), rather than repeated here.
 
+**Historical handoff record:** References to work for P03–P05 describe the original handoff, not current unfinished tasks. Later integration/container checks are in the [P03 plan](../docs/plans/P03-local-backend.md). The new P05 failure/recovery experiment was later canceled; the [failure story](../README.md#failure-story-model-unavailable-and-rollback) uses separate existing experiments. Measurements and limitations below remain unchanged.
+
 | | Registered run value |
 |---|---|
 | `model_version` | **`sentiment-6e7ff9fbc17c-0110c462`** |
@@ -249,7 +251,7 @@ The upstream repo provides `pytorch_model.bin`, not `model.safetensors`. **We ch
 
 | Reason | Status |
 |---|---|
-| **No unpickling at load time** | Applies: `pytorch_model.bin` uses pickle, which can execute code during deserialization. [Proposal §5](../PROPOSAL.md#5-planned-failure) plans to deliberately make the artifact unusable in P05, so loading a modified file should not execute code from it |
+| **No unpickling at load time** | Applies: `pytorch_model.bin` uses pickle, which can execute code during deserialization. The original [Proposal §5](../PROPOSAL.md#5-planned-failure) planned to make the artifact unusable, so safe loading of a modified file was part of the decision. That new P05 experiment was later canceled; this is not evidence that it was performed |
 | **No extra dependency** | Applies: `safetensors 0.8.0` is already a transitive dependency of `transformers` |
 | ~~Faster loading~~ | **Withdrawn**: measured time/RAM did not differ; see section 6 |
 
@@ -434,7 +436,7 @@ These measurements are not R1 evidence, but were requested for P02–P03 in [P01
 
 ### Why option A was chosen
 
-**Keep the binding claimed by `model_version` real — the main reason.** The digest covers code commit + environment + artifact, because `predict()` depends on our code as well as weights. A runtime-swappable blob would let `model_version` claim a binding that nothing enforces: someone could change the blob while the API still returns the old version. Other reasons/trade-offs are in the comparison above. **Person 3's failure demo needs a different method:** modify/delete a file in the running container's `model/`, or deploy an image with an intentionally broken artifact, rather than deleting a blob.
+**Keep the binding claimed by `model_version` real — the main reason.** The digest covers code commit + environment + artifact, because `predict()` depends on our code as well as weights. A runtime-swappable blob would let `model_version` claim a binding that nothing enforces: someone could change the blob while the API still returns the old version. Other reasons/trade-offs are in the comparison above. **Original failure-demo handoff:** A new experiment would have needed a changed file inside the container or an intentionally broken image, rather than a deleted blob. The user later canceled that experiment; this is not a current task or an instruction to change the running App.
 
 The chosen option supports the real artifact, as checked in section 3: ordinary files with no symlinks can be copied into the image; offline loading works; core code has no cloud calls; and 477 MiB fits the Basic container registry assumed in Proposal §6.
 

@@ -105,7 +105,7 @@ traffic-change time—not the total recovery time.
 Evidence: [P04 rollback report](reports/P04-evidence.md) and
 [recorded result](reports/P04-rollback-evidence.json).
 
-## Remaining submission work
+## Submission status and presentation notes
 
 - **Submission checks completed:** 319 local tests and Ruff passed before the
   push. The submitted file set, secrets and screenshot privacy were reviewed.

@@ -1,8 +1,10 @@
 # P01-T02 — API Contract
 
-Updated: 2026-10-05
+Original agreement: 2026-10-05; text-length decision added on 2026-10-07.
 
 Main plan: [Overview plan](../../overview-plan.md) · Project scope: [Proposal](../../PROPOSAL.md)
+
+**How to read this record:** This is the API agreement from P01, not a current list of unfinished work. Implementation and later checks are in the [P03 plan](P03-local-backend.md) and [P03 evidence](../../reports/P03-evidence.md). The approved localhost demo in P05 does not change this API contract.
 
 ## 1. Status and scope
 
@@ -109,7 +111,7 @@ Authorization: Bearer <service-token>
 
 ## 6. Implementation checklist
 
-These are **checks to perform in P03, not recorded passes**:
+These are the **original acceptance criteria, not a current to-do list**. The boxes are left as requirements rather than test results; see [P03's checklist results](../../reports/P03-evidence.md#1-automated-test-results-checklist-verification) and [later P03 review](P03-local-backend.md) for what was verified.
 
 - [ ] A valid request with a token returns `200` and all 3 response fields.
 - [ ] `sentiment` is one of the 3 allowed classes and `score` is between 0–1.
@@ -123,9 +125,9 @@ These are **checks to perform in P03, not recorded passes**:
 - [ ] Unexpected errors return `500` without exposing secrets or a stack trace.
 - [ ] App-generated errors follow the agreed format; logs contain neither service tokens nor full feedback text.
 
-The cloud failure and alert demonstration was planned for P05; it was not completed in T02.
+The cloud failure and alert demonstration was originally planned for P05, not T02. The user later canceled the new failure/recovery experiment; see the [approved P05 scope](../../overview-plan.md#p05--local-demo-and-small-monitoring-setup-approved-scope-2026-10-11). The traffic alert is separate evidence, not a model-failure alert.
 
-## 7. Open points and handoff
+## 7. Decisions and original handoff
 
 ### Text-length limit — locked on 2026-10-07
 
@@ -145,6 +147,8 @@ Why 512: `config.json` sets `max_position_embeddings = 514`, and RoBERTa reserve
 **Count and reject before calling the model.** Otherwise, overlength input causes a `RuntimeError` and becomes a `500`, instead of the `422` required in section 4. **Do not use `truncation=True`**, because section 3 rules out silent truncation.
 
 ### What remained at handoff
+
+This describes the P01 handoff, before P03 implementation. It is not a current blocker.
 
 The API agreement was complete, but **it was not yet implemented or tested**. API boundary checks from section 6 belonged to P03.
 

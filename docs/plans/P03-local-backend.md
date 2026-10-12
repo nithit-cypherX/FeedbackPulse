@@ -1,9 +1,11 @@
 # P03 — Run the backend locally
 
-- **Original handoff status:** `done` (2026-10-08) · The new technical review passed on 2026-10-10; waiting for the user's review before accepting P03 and returning to P04. See the notes below.
+- **Status:** `done`. After the original 2026-10-08 handoff, the 2026-10-10 review passed 106 tests in the locked environment and 20 HTTP checks in the container, plus startup/health checks. The user accepted the review and approved returning to P04.
 - **Owner:** Person 2 — Backend and deployment
 - **Main plan:** [Overview](../../overview-plan.md) · **Scope:** [Proposal](../../PROPOSAL.md) · **Agreed requirements:** [P01-T02 API contract](P01-T02-api-contract.md) · [P01-T03 System structure](P01-T03-system-structure.md) · [P02 Model pipeline](P02-model-pipeline.md)
 - **Phase evidence:** [reports/P03-evidence.md](../../reports/P03-evidence.md)
+
+The dated entries below preserve the checks and limits at each step. Phrases such as “still pending” or “P04 remained paused” describe that earlier step, not current blockers. Current submission status is in the [README](../../README.md#submission-status-and-presentation-notes).
 
 ## Token-only review fix — 2026-10-10
 

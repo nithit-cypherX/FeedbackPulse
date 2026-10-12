@@ -1,5 +1,7 @@
 # P03 — Local backend development and test evidence
 
+**Historical test report:** Results below belong to the 2026-10-08 test run. Later review fixes and container checks are in the [P03 plan](../docs/plans/P03-local-backend.md). The handoff to P04 is history, not a new deployment task.
+
 - **Test date:** 2026-10-08
 - **Status:** `done`
 - **Course criteria:** **R2 (Deployment & Container readiness)**, **R4 (Readiness/Liveness probe separation)**
@@ -133,7 +135,7 @@ docker run -d --name feedbackpulse-broken -p 8001:8000 -e MODEL_DIR="/nonexisten
    ```
 4. `POST /predict` returned **HTTP 503 Service Unavailable**, without making up a prediction.
 
-This confirms readiness/liveness separation in the tested case and provides a base for **P05 (Planned failure drill)**.
+This confirms readiness/liveness separation in the tested case. It was a base for the originally planned P05 failure drill, which the user later canceled. The presentation now uses this result and the separate P04 rollback evidence in the [failure story](../README.md#failure-story-model-unavailable-and-rollback); it does not claim one cloud failure-to-alert-to-recovery experiment.
 
 ---
 
