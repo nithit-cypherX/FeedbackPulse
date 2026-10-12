@@ -149,8 +149,20 @@ def test_cd_shell_scripts_have_valid_bash_syntax():
             assert result.returncode == 0, (step["name"], result.stderr)
 
 
-@pytest.mark.parametrize("entrypoint", ["cd-render", "make-deploy"])
-def test_deployment_callers_pass_identity_without_acr_password(tmp_path, entrypoint):
+@pytest.mark.parametrize("entrypoint,state,latest,ready,passes", [
+    ("cd-render", "Succeeded", "rev-new", "rev-new", True),
+    ("make-deploy", "Succeeded", "rev-new", "rev-new", True),
+    ("make-create", "Succeeded", "rev-new", "rev-new", True),
+    ("make-deploy", "Failed", "", "", False),
+    ("make-deploy", "InProgress", "rev-new", "rev-old", False),
+    ("make-deploy", "", "", "", False),
+    ("make-deploy", "read-error", "", "", False),
+    ("make-deploy", "Succeeded", "", "", False),
+    ("make-deploy", "Succeeded", "rev-new", "rev-old", False),
+])
+def test_deployment_callers_pass_identity_without_acr_password(
+    tmp_path, entrypoint, state, latest, ready, passes,
+):
     """Exercise real renderer/caller scripts with a fake Azure CLI, never the cloud."""
     root = WORKFLOWS.parents[1]
     (tmp_path / "cloudlayer").mkdir()
@@ -163,9 +175,23 @@ args = sys.argv[1:]
 if args[:3] == ["containerapp", "env", "show"]:
     print(os.environ["TEST_ENV_ID"])
 elif args[:2] == ["containerapp", "show"]:
-    print("test-app")
-elif args[:2] == ["containerapp", "update"]:
+    if "--query" not in args:
+        raise SystemExit(1 if os.environ["TEST_ENTRYPOINT"] == "make-create" else 0)
+    assert args[-2:] == ["-o", "tsv"]
+    if os.environ["TEST_STATE"] == "read-error":
+        raise SystemExit("Simulated Azure read failure")
+    values = {
+        "properties.provisioningState": os.environ["TEST_STATE"],
+        "properties.latestRevisionName": os.environ["TEST_LATEST"],
+        "properties.latestReadyRevisionName": os.environ["TEST_READY"],
+    }
+    print(values[args[args.index("--query") + 1]])
+elif args[:2] in [["containerapp", "update"], ["containerapp", "create"]]:
     import yaml
+    expected = "create" if os.environ["TEST_ENTRYPOINT"] == "make-create" else "update"
+    assert args[1] == expected
+    with open("deployment-calls.txt", "a") as stream:
+        stream.write(args[1] + "\\n")
     with open(args[args.index("--yaml") + 1]) as stream:
         config = yaml.safe_load(stream)
     with open("captured-config.json", "w") as stream:
@@ -190,6 +216,9 @@ os.execv(sys.executable, [sys.executable, os.environ["TEST_RENDERER"], *sys.argv
         "SERVICE_TOKEN": 'test-only-"quoted"-token',
         "TEST_ENV_ID": "/subscriptions/sub/resourceGroups/rg/providers/Microsoft.App/managedEnvironments/env",
         "TEST_RENDERER": str(root / "cloudlayer/render_config.py"),
+        "TEST_ENTRYPOINT": entrypoint, "TEST_STATE": state,
+        "TEST_LATEST": latest, "TEST_READY": ready,
+        "AZURE_CORE_OUTPUT": "none",
     }
     if entrypoint == "cd-render":
         steps = load_workflow("cd.yml")["jobs"]["deploy"]["steps"]
@@ -200,12 +229,15 @@ os.execv(sys.executable, [sys.executable, os.environ["TEST_RENDERER"], *sys.argv
         command = ["/usr/bin/make", "-f", str(root / "Makefile"), "deploy",
                    f"UV={fake_uv}", f"PATH={env['PATH']}"]
     result = subprocess.run(command, cwd=tmp_path, env=env, capture_output=True, text=True, check=False)
-    assert result.returncode == 0, result.stdout + result.stderr
+    assert (result.returncode == 0) == passes, result.stdout + result.stderr
     if entrypoint == "cd-render":
         config = yaml.safe_load((tmp_path / "rendered_containerapp.yaml").read_text())
     else:
         config = json.loads((tmp_path / "captured-config.json").read_text())
         assert not list((tmp_path / "cloudlayer").glob("containerapp.render.*.yaml"))
+        expected = "create" if entrypoint == "make-create" else "update"
+        assert (tmp_path / "deployment-calls.txt").read_text().splitlines() == [expected]
+        assert ("Deployment complete" in result.stdout) == passes
     assert config["identity"]["userAssignedIdentities"] == {identity: {}}
     settings = config["properties"]["configuration"]
     assert settings["registries"] == [{"server": "example.azurecr.io", "identity": identity}]

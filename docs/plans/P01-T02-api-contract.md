@@ -1,34 +1,34 @@
 # P01-T02 — API Contract
 
-อัปเดต: 2026-10-05
+Updated: 2026-10-05
 
-แผนหลัก: [Overview plan](../../overview-plan.md) · ขอบเขตโครงการ: [Proposal](../../PROPOSAL.md)
+Main plan: [Overview plan](../../overview-plan.md) · Project scope: [Proposal](../../PROPOSAL.md)
 
-## 1. สถานะและขอบเขต
+## 1. Status and scope
 
-- **ข้อตกลงหลัก:** ผู้ใช้ยืนยันรูปแบบ API นี้แล้ว
-- **สถานะ P01-T02:** `done` เฉพาะการตกลง — เหตุที่เคยค้างคือเพดานความยาวข้อความ ซึ่งยืนยันแล้วใน P02-T03 เมื่อ 2026-10-07 ดูส่วนที่ 7 
-- **การพัฒนาและทดสอบ:** ยังไม่ได้ implement และยังไม่มีผลทดสอบจริง
-- **ขอบเขต:** รับ feedback ภาษาอังกฤษครั้งละหนึ่งข้อความ แล้วคืน sentiment ให้ระบบที่เรียกใช้นำไปจัดกลุ่มสำหรับ human review
-- **ไม่รวม:** batch processing, อัปโหลด CSV, frontend, ระบบสมัครสมาชิก, คำตอบกลับลูกค้า หรือการตัดสินระดับความเร่งด่วน
+- **Main agreement:** The user approved this API design.
+- **P01-T02 status:** `done` for the agreement only. The open text-length limit was confirmed in P02-T03 on 2026-10-07; see section 7.
+- **Implementation and testing:** Not implemented or tested at this planning stage.
+- **Scope:** Accept one English feedback message and return a sentiment that the calling system can use to group messages for human review.
+- **Out of scope:** Batch processing, CSV uploads, frontend, user registration, customer replies and urgency classification.
 
-ไฟล์นี้เป็นข้อตกลงอ้างอิงสำหรับทีม ไม่ใช่หลักฐานว่าระบบทำงานแล้ว คำว่า lock หมายถึงต้องตกลงกันก่อนเปลี่ยนพฤติกรรม API และอัปเดตไฟล์นี้ให้ตรงกัน ไม่ใช่ตั้งไฟล์เป็น read-only หรือสร้างสำเนาข้อตกลงอีกชุด
+This is the team's reference agreement, not proof that the system works. “Locked” means we must agree on API behavior changes and update this file. It does not mean making the file read-only or creating another copy of the contract.
 
-## 2. API ที่ตกลงใช้
+## 2. Agreed endpoints
 
-| Method และ path | หน้าที่ | ผลที่คาดหวัง |
+| Method and path | Purpose | Expected result |
 |---|---|---|
-| `POST /predict` | รับข้อความหนึ่งข้อความแล้วคืนผลทำนาย | `200` เมื่อสำเร็จ; ใช้ข้อผิดพลาดตามส่วนที่ 4 |
-| `GET /health` | ตรวจว่าแอปยังตอบสนองอยู่ | `200` เมื่อแอปตอบสนอง; ไม่ได้ยืนยันว่า model พร้อม |
-| `GET /ready` | ตรวจว่า model โหลดสำเร็จและพร้อมรับงาน | พร้อมคืน `200`; ไม่พร้อมคืน `503` |
+| `POST /predict` | Accept one message and return a prediction | `200` on success; errors follow section 4 |
+| `GET /health` | Check whether the app responds | `200` when it responds; this does not prove the model is ready |
+| `GET /ready` | Check whether the model loaded and can serve requests | `200` when ready; `503` otherwise |
 
-กรณีแอปยังเปิดอยู่แต่โหลด model ไม่ได้ `/health` อาจผ่าน ขณะที่ `/ready` ต้องไม่ผ่าน การตรวจสองอย่างนี้จึงไม่ใช่เรื่องเดียวกัน และจะใช้กับ planned failure ใน P05
+If the app is running but the model cannot load, `/health` may pass while `/ready` must fail. These checks serve different purposes and were planned for the failure exercise in P05.
 
-## 3. Request และ response
+## 3. Request and response
 
 ### Request
 
-ส่ง JSON ไปที่ `POST /predict` พร้อม `Content-Type: application/json` และ service token ตามส่วนที่ 5:
+Send JSON to `POST /predict` with `Content-Type: application/json` and the service token described in section 5:
 
 ```json
 {
@@ -36,17 +36,17 @@
 }
 ```
 
-กติกาของ `text`:
+Rules for `text`:
 
-- ต้องมี field นี้ และค่าต้องเป็น string ไม่ใช่ตัวเลข, `null` หรือรายการหลายข้อความ
-- ต้องไม่เป็นข้อความว่างหรือมีแต่ช่องว่าง
-- รับข้อความครั้งละหนึ่งข้อความ ไม่รับไฟล์
-- ถ้ายาวเกินเพดานให้ปฏิเสธ ไม่ตัดส่วนท้ายทิ้งเงียบ ๆ
-- เพดานคือ **510 tokens ของเนื้อหา** (รวม special tokens 2 ตัวเป็น 512 tokens) นับด้วย tokenizer ของ model revision ที่ใช้งาน **ไม่ใช่นับอักขระ** ดูที่มาในส่วนที่ 7
+- The field is required and must be a string, not a number, `null` or a list.
+- It must not be empty or contain only whitespace.
+- Accept one message at a time, not a file.
+- Reject messages over the limit; do not silently cut off the end.
+- The limit is **510 content tokens** (512 including 2 special tokens), counted by the tokenizer for the deployed model revision. **Do not count characters instead.** See section 7.
 
 ### Success response
 
-คืน HTTP `200` พร้อม JSON:
+Return HTTP `200` with JSON:
 
 ```json
 {
@@ -56,29 +56,29 @@
 }
 ```
 
-**ตัวอย่างนี้ไม่ได้มาจากการทดลองจริง** ทั้งคะแนนและชื่อ version ใช้แสดงรูปแบบเท่านั้น
+**This is an example, not a measured result.** The score and version name only show the response format.
 
-| Field | ความหมาย |
+| Field | Meaning |
 |---|---|
-| `sentiment` | กลุ่มที่ model เลือก: `negative`, `neutral` หรือ `positive` |
-| `score` | คะแนนของกลุ่มที่เลือก อยู่ระหว่าง 0–1 ไม่ใช่การรับประกันว่าคำตอบถูกต้องตามเปอร์เซ็นต์นั้น |
-| `model_version` | รุ่นของ model artifact ที่กำลังใช้งานจริง และย้อนกลับไปหา lineage ได้ ไม่ใช่ชื่อเวอร์ชันตัวอย่างที่ใส่ค้างไว้ |
+| `sentiment` | The model's chosen class: `negative`, `neutral` or `positive` |
+| `score` | Score for that class, from 0–1; it is not a guarantee of correctness at that percentage |
+| `model_version` | The version of the model artifact actually in use, traceable to its lineage; not a leftover example value |
 
-ไม่คืนคำแนะนำตอบลูกค้า ระดับความเร่งด่วน หรือคำอธิบายที่สร้างขึ้นเพิ่มเติม
+Do not add suggested customer replies, urgency labels or generated explanations.
 
-## 4. Validation และ error handling
+## 4. Validation and error handling
 
-| เหตุการณ์ | HTTP status และพฤติกรรม |
+| Situation | HTTP status and behavior |
 |---|---|
-| ข้อมูลถูกต้องและทำนายสำเร็จ | `200` พร้อมผล sentiment |
-| JSON เสียรูปแบบ | `400` แจ้งว่าอ่าน request ไม่ได้ |
-| ไม่มี `text`, ชนิดข้อมูลผิด หรือข้อความว่าง | `422` แจ้งว่าข้อมูลไม่ผ่านเงื่อนไข |
-| ข้อความยาวเกินที่รองรับ | `422` แจ้งให้ส่งข้อความสั้นลง ไม่ตัดข้อความแล้วทำนายต่อ |
-| ไม่มี token หรือ token ไม่ถูกต้อง | `401` และไม่เรียก model |
-| model ยังไม่พร้อมหรือโหลดไม่สำเร็จ | `503` และไม่สร้างผลทำนายปลอม |
-| เกิดข้อผิดพลาดที่ไม่คาดคิด | `500` ไม่ส่งรายละเอียดภายในระบบออกไป |
+| Valid input and successful prediction | `200` with sentiment |
+| Malformed JSON | `400`: the request cannot be read |
+| Missing `text`, wrong type or empty text | `422`: input does not meet the rules |
+| Text exceeds the supported limit | `422`: ask for shorter text; do not truncate and predict |
+| Missing or incorrect token | `401`; do not call the model |
+| Model is not ready or failed to load | `503`; do not make up a prediction |
+| Unexpected error | `500`; do not expose internal details |
 
-ข้อผิดพลาดที่แอปจัดการได้ใช้รูปแบบเดียวกัน เช่น:
+Errors handled by the app use one format, for example:
 
 ```json
 {
@@ -89,63 +89,63 @@
 }
 ```
 
-`error.code` ใช้ให้โปรแกรมแยกประเภทข้อผิดพลาด ส่วน `error.message` ใช้บอกผู้เรียกว่ามีปัญหาอะไร โดยไม่เปิดเผย secret หรือ stack trace
+`error.code` lets programs distinguish error types. `error.message` explains the problem to callers without exposing secrets or a stack trace.
 
-รหัส HTTP ใช้ตาม [HTTP Semantics — RFC 9110](https://www.rfc-editor.org/rfc/rfc9110.html#name-status-codes) สำหรับ `401` ต้องมี `WWW-Authenticate: Bearer` ด้วย รูปแบบ JSON ข้างต้นเป็นข้อตกลงของแอป; ข้อผิดพลาดจาก cloud ที่เกิดก่อน request ถึงแอปอาจมีรูปแบบต่างออกไป
+HTTP status codes follow [HTTP Semantics — RFC 9110](https://www.rfc-editor.org/rfc/rfc9110.html#name-status-codes). A `401` response must also include `WWW-Authenticate: Bearer`. The JSON format above is the app's contract; cloud errors raised before a request reaches the app may look different.
 
-## 5. Access control และข้อมูลที่ไม่เก็บ
+## 5. Access control and data we do not keep
 
-`/predict` ต้องมี service token ผ่าน header:
+`/predict` requires a service token in this header:
 
 ```http
 Authorization: Bearer <service-token>
 ```
 
-- ใช้ HTTPS เมื่ออยู่บน cloud
-- เก็บ token เป็น secret ไม่ใส่ใน Git และไม่บันทึกลง logs
-- ยังไม่สร้างระบบสมัครสมาชิกหรือหน้า login
-- ประมวลผล feedback แล้วคืนผล ยังไม่เก็บ feedback ลงฐานข้อมูล
-- ไม่บันทึก feedback เต็มข้อความลง logs
+- Use HTTPS in the cloud.
+- Store the token as a secret, not in Git or logs.
+- Do not add user registration or a login page.
+- Process feedback and return the result; do not store feedback in a database.
+- Do not log full feedback text.
 
-## 6. Checklist สำหรับตรวจตอน implement
+## 6. Implementation checklist
 
-รายการต่อไปนี้เป็น **สิ่งที่ต้องตรวจใน P03 ไม่ใช่ผลทดสอบที่ผ่านแล้ว**:
+These are **checks to perform in P03, not recorded passes**:
 
-- [ ] ส่ง request ที่ถูกต้องพร้อม token แล้วได้ `200` และ response ครบทั้ง 3 fields
-- [ ] `sentiment` อยู่ใน 3 กลุ่มที่กำหนด และ `score` อยู่ระหว่าง 0–1
-- [ ] `model_version` ตรงกับ artifact ที่โหลดจริง และตรวจย้อนกลับไปหา lineage ได้
-- [ ] JSON เสียรูปแบบได้ `400`
-- [ ] ไม่มี `text`, เป็น `null`, ตัวเลข, list, ข้อความว่าง หรือมีแต่ช่องว่าง ได้ `422`
-- [ ] ข้อความที่ **510 content tokens** ยังรับได้ และที่ **511 content tokens** ได้ `422` โดยไม่ตัดแล้วทำนายต่อ
-- [ ] ไม่มี token หรือ token ผิดได้ `401` พร้อม authentication header และไม่มีการเรียก model
-- [ ] model พร้อมแล้ว `/ready` ได้ `200`; model ไม่พร้อมได้ `503`
-- [ ] เมื่อแอปยังตอบสนองแต่ model ไม่พร้อม `/health` ยังแยกจาก `/ready` ได้ และ `/predict` ไม่คืน sentiment ปลอม
-- [ ] ข้อผิดพลาดที่ไม่คาดคิดได้ `500` โดยไม่ส่ง secret หรือ stack trace ออกไป
-- [ ] error response ที่แอปสร้างใช้รูปแบบที่ตกลง และ logs ไม่เก็บ service token หรือ feedback เต็มข้อความ
+- [ ] A valid request with a token returns `200` and all 3 response fields.
+- [ ] `sentiment` is one of the 3 allowed classes and `score` is between 0–1.
+- [ ] `model_version` matches the loaded artifact and can be traced to its lineage.
+- [ ] Malformed JSON returns `400`.
+- [ ] Missing `text`, `null`, a number, list, empty string or whitespace-only input returns `422`.
+- [ ] **510 content tokens** are accepted; **511 content tokens** return `422` without truncation and prediction.
+- [ ] A missing or incorrect token returns `401` with the authentication header, without calling the model.
+- [ ] `/ready` returns `200` when the model is ready and `503` otherwise.
+- [ ] When the app responds but the model is unavailable, `/health` remains separate from `/ready`, and `/predict` does not return a fake sentiment.
+- [ ] Unexpected errors return `500` without exposing secrets or a stack trace.
+- [ ] App-generated errors follow the agreed format; logs contain neither service tokens nor full feedback text.
 
-การสาธิต failure และ alert บน cloud ยังอยู่ใน P05 ไม่ใช่งานที่ทำเสร็จใน T02
+The cloud failure and alert demonstration was planned for P05; it was not completed in T02.
 
-## 7. จุดที่ยังต้องยืนยันและการส่งต่องาน
+## 7. Open points and handoff
 
-### เพดานความยาวข้อความ — ล็อกแล้ว 2026-10-07
+### Text-length limit — locked on 2026-10-07
 
-ยืนยันจาก tokenizer และ model revision `3216a57f2a0d9c45a2e6c20157c20c49fb4bf9c7` ที่ P02 ใช้จริง · หลักฐานและวิธีทดลองอยู่ใน [reports/P02-evidence.md ส่วนที่ 3](../../reports/P02-evidence.md)
+Confirmed using the tokenizer and model revision `3216a57f2a0d9c45a2e6c20157c20c49fb4bf9c7` used in P02. The experiment and evidence are in [P02 evidence, section 3](../../reports/P02-evidence.md).
 
-| รายการ | ค่าที่ล็อก |
+| Item | Locked value |
 |---|---|
-| **เนื้อหาข้อความสูงสุด** | **510 tokens** |
-| **special tokens ที่นับรวม** | **2** — `<s>` ข้างหน้าและ `</s>` ข้างหลัง |
-| **ความยาวลำดับรวมสูงสุด** | **512 tokens** |
-| **วิธีนับ** | นับ **token** ด้วย tokenizer ของ revision ที่ใช้งาน **ไม่ใช่นับอักขระ** |
+| **Maximum content length** | **510 tokens** |
+| **Included special tokens** | **2** — `<s>` at the start and `</s>` at the end |
+| **Maximum total sequence length** | **512 tokens** |
+| **Counting method** | Count **tokens** with the revision's tokenizer, **not characters** |
 
-ที่มาของ 512: `config.json` ระบุ `max_position_embeddings = 514` และ RoBERTa ใช้ตำแหน่งสำรอง 2 ช่อง · ทดลองแล้วความยาวรวม 512 ผ่าน ส่วน 513 พังด้วย `RuntimeError: index 514 is out of bounds`
+Why 512: `config.json` sets `max_position_embeddings = 514`, and RoBERTa reserves 2 positions. A total length of 512 passed the experiment; 513 failed with `RuntimeError: index 514 is out of bounds`.
 
-**ห้ามนับอักขระแทน token** อัตราอักขระต่อ token วัดได้ตั้งแต่ 0.52 (ภาษาไทย) ถึง 3.98 (ตัวอักษรเดียวติดกัน) เพดานแบบนับอักขระจะปล่อยข้อความที่เกิน 512 tokens ผ่านได้
+**Do not substitute a character count.** The measured character-to-token ratio ranged from 0.52 (Thai) to 3.98 (one repeated letter). A character limit could let inputs over 512 tokens through.
 
-**ต้องนับแล้วปฏิเสธก่อนเรียก model** ถ้าปล่อยข้อความยาวเกินถึง model จะได้ `RuntimeError` ซึ่งกลายเป็น `500` ขัดกับส่วนที่ 4 ที่กำหนดให้เป็น `422` · และ **ห้ามใช้ `truncation=True`** เพราะเป็นการตัดเงียบ ๆ ที่ส่วนที่ 3 ห้ามไว้
+**Count and reject before calling the model.** Otherwise, overlength input causes a `RuntimeError` and becomes a `500`, instead of the `422` required in section 4. **Do not use `truncation=True`**, because section 3 rules out silent truncation.
 
-### ที่ยังเหลือ
+### What remained at handoff
 
-ข้อตกลง API ครบทุกจุดแล้ว แต่ **ยังไม่ได้ implement และยังไม่มีผลทดสอบจริง** · การตรวจ boundary case ผ่าน API ตาม checklist ส่วนที่ 6 อยู่ใน P03
+The API agreement was complete, but **it was not yet implemented or tested**. API boundary checks from section 6 belonged to P03.
 
-เรื่องโครงสร้างระบบและจุดตรวจตกลงไว้แล้วใน [P01-T03](P01-T03-system-structure.md) การเขียน API อยู่ใน P03 และยังไม่ได้เริ่มพัฒนา สร้าง cloud resource หรือทดสอบระบบจากข้อตกลงนี้
+System structure and checks were agreed in [P01-T03](P01-T03-system-structure.md). API implementation belonged to P03. This agreement itself did not start development, create cloud resources or test the system.

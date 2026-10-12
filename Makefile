@@ -98,7 +98,16 @@ deploy: validate-config
 		echo "Creating new Container App '$(AZURE_CONTAINER_APP_NAME)'..."; \
 		az containerapp create -n $(AZURE_CONTAINER_APP_NAME) -g $(AZURE_RESOURCE_GROUP) --environment $(AZURE_CONTAINER_APP_ENV) --yaml "$$TEMP_YAML"; \
 	fi; \
-	echo "==> Deployment complete. Run 'make status' to check endpoints."
+	STATE=$$(az containerapp show -n "$$AZURE_CONTAINER_APP_NAME" -g "$$AZURE_RESOURCE_GROUP" --query properties.provisioningState -o tsv); \
+	if [ "$$STATE" != "Succeeded" ]; then \
+		echo "Error: deployment not confirmed; Azure provisioning state is '$$STATE'." >&2; exit 1; \
+	fi; \
+	LATEST=$$(az containerapp show -n "$$AZURE_CONTAINER_APP_NAME" -g "$$AZURE_RESOURCE_GROUP" --query properties.latestRevisionName -o tsv); \
+	READY=$$(az containerapp show -n "$$AZURE_CONTAINER_APP_NAME" -g "$$AZURE_RESOURCE_GROUP" --query properties.latestReadyRevisionName -o tsv); \
+	if [ -z "$$LATEST" ] || [ "$$LATEST" != "$$READY" ]; then \
+		echo "Error: the latest revision is not confirmed ready. Run 'make status' to inspect the app." >&2; exit 1; \
+	fi; \
+	echo "==> Deployment complete: Azure succeeded and the latest revision is ready. API checks are still required."
 
 status:
 	@if [ -z "$(AZURE_CONTAINER_APP_NAME)" ] || [ -z "$(AZURE_RESOURCE_GROUP)" ]; then \

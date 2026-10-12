@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>FeedbackPulse · Local demo</title>
+  <link rel="stylesheet" href="/static/styles.css">
+  <script src="/static/app.js" defer></script>
+</head>
+<body>
+  <main class="shell">
+    <header class="header">
+      <div>
+        <p class="eyebrow">CUSTOMER FEEDBACK, MADE CLEAR</p>
+        <h1>FeedbackPulse<span class="brand-dot" aria-hidden="true">.</span></h1>
+        <p class="intro">Analyse English customer feedback.</p>
+      </div>
+      <span class="local-badge">Local demo</span>
+    </header>
+
+    <div class="workspace">
+      <section class="input-panel" aria-labelledby="input-heading">
+        <h2 id="input-heading">Your feedback</h2>
+        <p class="section-note">One message. Three possible sentiments.</p>
+        <form id="feedback-form" novalidate autocomplete="off">
+          <label class="field-label" for="feedback">Feedback text</label>
+          <textarea id="feedback" name="feedback" rows="7" placeholder="Type or paste customer feedback here…" aria-describedby="input-hint" required spellcheck="false"></textarea>
+          <p class="hint" id="input-hint">Use English text without personal details. The API checks its 510-token limit.</p>
+          <fieldset class="examples">
+            <legend>Try an example</legend>
+            <button type="button" class="example" data-example="praise">Praise</button>
+            <button type="button" class="example" data-example="complaint">Complaint</button>
+            <button type="button" class="example" data-example="other">Other</button>
+          </fieldset>
+          <div class="actions">
+            <button class="primary" id="analyse" type="submit" disabled>Analyse feedback <span aria-hidden="true">→</span></button>
+            <button class="secondary" id="clear" type="button">Clear</button>
+          </div>
+        </form>
+        <p class="privacy-note">Sent to the configured Azure API only when you click Analyse. This page does not save a history.</p>
+      </section>
+
+      <section class="result-panel" aria-labelledby="result-heading" aria-busy="false" id="result-panel">
+        <div class="result-heading">
+          <h2 id="result-heading">Analysis result</h2>
+          <span class="eyebrow">API RESPONSE</span>
+        </div>
+        <dl class="result-list">
+          <div class="sentiment-row"><dt>Sentiment</dt><dd id="sentiment" class="sentiment">—</dd></div>
+          <div><dt>Model score</dt><dd id="score">—</dd></div>
+          <div><dt>Response time</dt><dd id="response-time">—</dd></div>
+          <div class="version-row"><dt>Model version</dt><dd id="model-version">—</dd></div>
+        </dl>
+        <p id="result-message" class="result-message" role="status" aria-live="polite" aria-atomic="true">Your result will appear here after the API responds.</p>
+        <div class="metric-notes">
+          <p><strong>Score</strong> is the model’s score for this label, not its overall accuracy.</p>
+          <p><strong>Time</strong> is one round trip from this page, not p95 or model-only time.</p>
+        </div>
+      </section>
+    </div>
+
+    <footer class="api-panel">
+      <div>
+        <p class="api-label">Azure API <span id="api-status" class="status" data-state="unchecked">Not checked</span></p>
+        <p id="api-detail" class="hint" role="status" aria-live="polite">Check readiness when you need it. No automatic polling.</p>
+      </div>
+      <div class="api-actions">
+        <button class="secondary" id="check-api" type="button">Check API</button>
+        <a class="secondary monitoring-link" id="open-monitoring" href="https://portal.azure.com/#@student.mahidol.ac.th/dashboard/private/ad763481-176e-4f6f-a279-f4ebbdec412f" target="_blank" rel="noopener noreferrer" aria-describedby="monitoring-note">Open monitoring <span aria-hidden="true">↗</span></a>
+        <p class="hint" id="monitoring-note">Malaysia West App · Azure sign-in required · new tab</p>
+      </div>
+    </footer>
+    <p class="footer-note">Local interface → local relay → configured Azure API</p>
+  </main>
+</body>
+</html>

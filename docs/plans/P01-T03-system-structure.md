@@ -1,174 +1,174 @@
 # P01-T03 — System Structure
 
-อัปเดต: 2026-10-05
+Updated: 2026-10-05
 
-แผนหลัก: [Overview plan](../../overview-plan.md) · ขอบเขตโครงการ: [Proposal](../../PROPOSAL.md) · ข้อตกลง API: [P01-T02](P01-T02-api-contract.md)
+Main plan: [Overview plan](../../overview-plan.md) · Project scope: [Proposal](../../PROPOSAL.md) · API contract: [P01-T02](P01-T02-api-contract.md)
 
-## 1. สถานะและขอบเขตที่ตกลงแล้ว
+## 1. Agreed status and scope
 
-- **สถานะ P01-T03:** `done` เฉพาะการตกลงแผนทั้ง 3 เรื่อง ไม่ใช่การพัฒนาระบบเสร็จ
-- **เรื่องที่ 1 — หน้าที่และความสัมพันธ์ของแต่ละส่วน:** ผู้ใช้ยืนยันแล้ว
-- **เรื่องที่ 2 — ตำแหน่ง code, data, model และ configuration:** ผู้ใช้ยืนยันโครงสร้างระดับบนและกติกาเข้า Git แล้ว
-- **เรื่องที่ 3 — จุดตรวจและหลักฐานตามเกณฑ์ R1–R5:** ผู้ใช้ยืนยันจุดตรวจและแนวทางเก็บหลักฐานแล้ว
-- **การพัฒนาและทดสอบ:** ยังไม่ได้ implement, deploy หรือทดสอบโครงสร้างนี้จริง
+- **P01-T03 status:** `done` for the three planning decisions, not for implementation.
+- **Part 1 — Component roles and connections:** Approved by the user.
+- **Part 2 — Locations for code, data, models and configuration:** The user approved the top-level structure and Git rules.
+- **Part 3 — Checks and evidence for R1–R5:** The user approved the checks and evidence approach.
+- **Implementation and testing:** This structure had not yet been implemented, deployed or tested.
 
-FeedbackPulse จะมี backend หนึ่ง service โดย API กับ model อยู่ใน container เดียวกัน ส่วนงานเตรียมและประเมิน model เป็น workflow แยกใน repo เดียวกัน ข้อตกลงนี้ไม่ได้กำหนดว่าต้องมีเพียงหนึ่ง instance และไม่ได้หมายความว่าต้องเปิด server สำหรับเตรียม model ทิ้งไว้อีกตัว
+FeedbackPulse will have one backend service, with the API and model in the same container. Model preparation and evaluation are a separate workflow in the same repo. This does not require exactly one instance or a second always-running server for model preparation.
 
-เรา lock หน้าที่และความสัมพันธ์ของส่วนต่าง ๆ โครงสร้างโฟลเดอร์ระดับบน กติกาเข้า Git และจุดตรวจพร้อมหลักฐานแล้ว ยังไม่กำหนดรายละเอียดเครื่องหรือทรัพยากร cloud การเปลี่ยนข้อตกลงนี้ต้องคุยและอัปเดตไฟล์นี้ให้ตรงกัน ไม่สร้างสำเนาข้อตกลงอีกชุด
+Component roles, top-level folders, Git rules and evidence checks are agreed. Machine sizing and cloud resources are not fixed at this stage. Discuss changes and update this file rather than creating another copy of the agreement.
 
-## 2. ส่วนเตรียม model — ทำก่อนนำรุ่นนั้นไปใช้งาน
+## 2. Model preparation — before using a release
 
-หน้าที่ของส่วนนี้คือ:
+This part will:
 
-- นำ pretrained model รุ่นที่ระบุมาเตรียมใช้งาน
-- ประเมินกับข้อมูล evaluation ที่มี version
-- จัดชุดไฟล์ที่จำเป็น เช่น model, tokenizer และ configuration
-- ลงทะเบียน model พร้อมข้อมูลว่าใช้ code, data และ model ต้นทางรุ่นไหน
+- Prepare a specified pretrained model revision.
+- Evaluate it against versioned evaluation data.
+- Package the required model, tokenizer and configuration files.
+- Register the model with its code, data and upstream model versions.
 
-**ผลลัพธ์คือชุด model ที่พร้อมให้ระบบบริการนำไปใช้ และตรวจย้อนกลับได้**
+**The output is a traceable model package that the serving system can use.**
 
-workflow นี้ทำเมื่อเตรียม model หรือ release รุ่นใหม่ ไม่ได้ทำทุกครั้งที่มีคนส่ง feedback และไม่ได้เพิ่มการ train หรือ fine-tune เข้าไปในขอบเขต
+Run this workflow when preparing a model or a new release, not for every feedback request. Training and fine-tuning remain out of scope.
 
-## 3. ส่วนให้บริการ — รับ feedback แล้วทำนาย
+## 3. Serving — receive feedback and predict
 
-ส่วนนี้คือ backend ที่จะ deploy บน Azure Container Apps ตาม proposal โดยทำหน้าที่:
+The backend will run on Azure Container Apps, as proposed. It will:
 
-1. รับ request และตรวจ token กับข้อมูลที่ส่งมา
-2. เรียก model รุ่นที่ระบบเตรียมไว้
-3. ส่งผลกลับตาม API contract ใน P01-T02
+1. Receive the request and check its token and input.
+2. Call the prepared model version.
+3. Return the response defined in P01-T02.
 
-โหลด model รุ่นที่กำหนดเมื่อ process ของแอปเริ่มทำงาน แล้วใช้ model ที่โหลดแล้วกับหลาย request ไม่โหลดใหม่ทุกครั้งที่มีข้อความเข้ามา เมื่อมี process หรือ instance ใหม่ ก็ต้องโหลด model ของตัวเองก่อนพร้อมรับงาน จำนวน process และ instance ยังไม่ได้กำหนดในขั้นนี้
+Load the specified model when the app process starts, then reuse it across requests. Do not reload it for each message. Every new process or instance must load its own model before becoming ready. Process and instance counts are not decided at this stage.
 
-ตัวอย่างเช่น เมื่อมีข้อความ “The staff were helpful.” เข้ามา backend จะตรวจ request แล้วนำข้อความให้ model ที่เตรียมไว้ทำนาย ไม่เริ่มประเมิน dataset หรือเตรียม model รุ่นใหม่ระหว่าง request นี้ ตัวอย่างนี้อธิบายพฤติกรรมที่ตกลง ไม่ใช่ผลทดลองจริง
+For example, when “The staff were helpful.” arrives, the backend validates the request and uses the prepared model. It does not evaluate the dataset or prepare a new model during that request. This illustrates the agreed behavior, not a measured result.
 
-ถ้า model ยังไม่พร้อม ระบบต้องแสดงสถานะไม่พร้อมและไม่คืนผลทำนายปลอม โดยใช้พฤติกรรมของ `/predict`, `/health` และ `/ready` ตาม [API contract](P01-T02-api-contract.md) ไม่กำหนดกติกาซ้ำอีกชุดในไฟล์นี้
+If the model is not ready, report that state without returning a fake prediction. Follow the `/predict`, `/health` and `/ready` behavior in the [API contract](P01-T02-api-contract.md), rather than defining a second set of rules here.
 
-## 4. อยู่ใน container เดียวกัน แต่แยกหน้าที่ของโค้ด
+## 4. One container, separate code responsibilities
 
-- **โค้ด API:** รับ request ตรวจสิทธิ์ ตรวจข้อมูล และจัด response
-- **โค้ด inference:** เตรียมข้อความให้ model ทำนาย แล้วแปลงผลเป็น sentiment และ score
-- **โค้ดติดต่อ cloud:** แยกเป็น adapter ส่วนค่าของ environment อ่านจาก configuration ตามกติกาวิชา
+- **API code:** Receive requests, check access and input, and format responses.
+- **Inference code:** Prepare text for the model and turn its output into sentiment and score.
+- **Cloud code:** Keep cloud calls in an adapter and read environment-specific values from configuration, following the course rules.
 
-ส่วน evaluation กับ API ใช้วิธีเตรียมข้อความและทำนายชุดเดียวกัน เพื่อไม่ให้ตอนประเมินทำแบบหนึ่ง แต่ตอนใช้งานจริงทำอีกแบบ
+Evaluation and the API must share preprocessing and inference. Otherwise, the model could be evaluated one way and used differently in production.
 
-กำหนดตำแหน่งโฟลเดอร์ระดับบนแล้วในส่วนที่ 6 แต่ยังไม่แตกโฟลเดอร์ย่อยหรือกำหนดชื่อทุกไฟล์
+Section 6 sets the top-level folders. Subfolders and individual filenames are not fixed yet.
 
-## 5. เหตุผลและข้อแลกเปลี่ยน
+## 5. Reasons and trade-offs
 
-ขอบเขตปัจจุบันมี API เดียวและ model เดียว การอยู่ใน container เดียวกันทำให้ build, deploy และ rollback เป็นชุดเดียวกัน โดยไม่ต้องจัดการการเชื่อมต่อระหว่าง API service กับ model service อีกชั้น
+The scope has one API and one model. Keeping them in one container lets us build, deploy and roll them back together without another connection between an API service and a model service.
 
-ข้อแลกเปลี่ยนคือ:
+The trade-offs are:
 
-- API กับ model ใช้ทรัพยากรร่วมกัน
-- ยังแยกเพิ่มจำนวน instance ของ API และ model ออกจากกันไม่ได้
-- ต้องรอโหลด model ก่อนพร้อมรับงาน
+- The API and model share resources.
+- They cannot scale independently.
+- Requests must wait until the model has loaded.
 
-ต้องวัด RAM และเวลาเริ่มระบบใน P02–P03 รวมถึงทดสอบเป้าประสิทธิภาพตาม proposal จึงยังไม่ถือว่าโครงสร้างนี้ผ่านเป้าประสิทธิภาพหรือพิสูจน์ต้นทุนแล้ว
+P02–P03 must measure RAM and startup time and test the proposal's performance target. The structure alone does not prove performance or cost.
 
-## 6. ตำแหน่ง code, data, model และ configuration
+## 6. Locations for code, data, models and configuration
 
-ผู้ใช้ยืนยันโครงสร้างระดับบนและกติกาการเก็บไฟล์ต่อไปนี้แล้ว เป็นตำแหน่งที่จะใช้เมื่อเริ่มพัฒนา **ยังไม่สร้างโฟลเดอร์เปล่าทั้งหมดตอนนี้**:
+The user approved these top-level locations and storage rules for implementation. **Do not create all these empty folders in advance.**
 
 ```text
 /home/nirvana/feedbackpulse/
-├── src/                  โค้ด API, inference และ evaluation
-├── cloudlayer/           โค้ดที่ติดต่อ Azure
-├── tests/                ชุดทดสอบ
-├── data/                 ข้อมูล evaluation ที่ดึงมาใช้ในเครื่อง
-├── artifacts/            ชุดไฟล์ model ที่เตรียมหรือดึงมาใช้
-├── reports/              ผลสรุปและหลักฐานการทำงาน
+├── src/                  API, inference and evaluation code
+├── cloudlayer/           Azure integration code
+├── tests/                Test suite
+├── data/                 Evaluation data downloaded locally
+├── artifacts/            Prepared or downloaded model packages
+├── reports/              Results and evidence
 ├── docs/
-│   └── plans/            ข้อตกลงที่เรา lock ไว้
-├── cloud.env.example     ตัวอย่าง configuration ที่ไม่มี secret
-├── cloud.env             configuration จริงของเครื่องนั้น
+│   └── plans/            Agreed plans
+├── cloud.env.example     Example configuration without secrets
+├── cloud.env             Real configuration for this machine
 ├── .gitignore
 ├── README.md
 ├── PROPOSAL.md
 └── overview-plan.md
 ```
 
-ยังไม่แตกโฟลเดอร์ย่อยหรือกำหนดชื่อทุกไฟล์ เพราะยังไม่มีโค้ดให้เห็นว่าจำเป็นต้องแบ่งละเอียดแค่ไหน
+Do not decide every subfolder and filename before the code shows what is needed.
 
-โค้ด evaluation กับ API อยู่ในส่วนโค้ดหลักเหมือนกัน เพื่อเรียกใช้วิธีเตรียมข้อความและทำนายร่วมกันได้ ส่วนการติดต่อ Azure แยกออกมาตามข้อตกลงเรื่องที่ 1
+Evaluation and the API both belong in the core code so they can share preprocessing and inference. Azure integration remains separate, as agreed in part 1.
 
-พื้นที่ `data/` และ `artifacts/` ในภาพคือที่เก็บไฟล์ที่ดึงหรือเตรียมมาใช้ในเครื่อง ยังไม่ได้กำหนดบริการหรือรูปแบบเก็บ artifact ที่ทีมจะใช้ร่วมกัน และไม่ได้กำหนดวิธีนำ model เข้า container
+Here, `data/` and `artifacts/` are local storage for downloaded or prepared files. This original structure did not choose shared artifact storage or how to put the model into the container.
 
-## 7. อะไรเข้า Git และอะไรไม่เข้า
+## 7. What belongs in Git
 
-| สิ่งที่เก็บ | กติกาที่ตกลง |
+| Item | Agreed rule |
 |---|---|
-| Code, tests และเอกสาร | เข้า Git |
-| Configuration ตัวอย่าง | เข้า Git แต่ไม่มี token หรือ secret |
-| Configuration จริงและ credentials | ไม่เข้า Git และต้องไม่ติดไปใน Docker image |
-| Dataset จริงและไฟล์ model ขนาดใหญ่ | ไม่เข้า Git โดยตรง |
-| ข้อมูลระบุ version, hash และวิธีดึง dataset/model | เข้า Git เพื่อให้เพื่อนใช้ของรุ่นเดียวกันได้ |
-| รายงานผลและหลักฐานที่จำเป็น | เข้า Git หลังตรวจว่าไม่มีข้อมูลอ่อนไหว |
-| Cache, environment, log ดิบ และไฟล์ชั่วคราว | ไม่เข้า Git |
+| Code, tests and documentation | Commit to Git |
+| Example configuration | Commit, without tokens or secrets |
+| Real configuration and credentials | Do not commit or include in the Docker image |
+| Actual datasets and large model files | Do not commit directly |
+| Versions, hashes and dataset/model retrieval instructions | Commit so teammates can use the same versions |
+| Required reports and evidence | Commit after checking for sensitive data |
+| Caches, environments, raw logs and temporary files | Do not commit |
 
-ไม่เก็บ model ใน Git ไม่ได้แปลว่าเพื่อนต้องไปหา model เอง เราต้องมีข้อมูลระบุรุ่นและขั้นตอนดึงให้ครบ ส่วนที่เก็บ artifact **ตัดสินแล้วใน P02-T10 เมื่อ 2026-10-07: ใส่เข้า container image ตอน build** ดู [reports/P02-evidence.md ส่วนที่ 7](../../reports/P02-evidence.md)
+Keeping models out of Git does not mean teammates must find them themselves. Record versions and retrieval steps. Artifact storage was **decided in P02-T10 on 2026-10-07: include the artifact in the container image at build time**. See [P02 evidence, section 7](../../reports/P02-evidence.md).
 
-กติกานี้เป็นข้อตกลงสำหรับการพัฒนา ยังไม่ได้แก้ `.gitignore` หรือสร้างไฟล์สำหรับควบคุม Docker build ในรอบนี้ ต้องตรวจการกันไฟล์จริงเมื่อถึงงานที่เกี่ยวข้อง ไม่ถือว่าการเขียนกติกาเท่ากับป้องกันครบแล้ว
+These are development rules. This planning step did not edit `.gitignore` or create Docker build controls. Check actual file exclusion during the relevant implementation task; writing a rule does not prove protection.
 
-## 8. หน้าที่ของเอกสารและการสร้างไฟล์
+## 8. Document roles and file creation
 
-- **Overview:** บอกภาพรวม สถานะ และงานถัดไป
-- **เอกสาร plans:** บอกข้อตกลงที่ทีมต้องทำให้ตรงกัน
-- **Reports:** เก็บผลที่ทดลองหรือทดสอบแล้ว เช่น ผล evaluation, load test และการกู้ระบบ
-- **README:** บอกคนที่เพิ่ง clone ว่าต้องเตรียมอะไรและรันอย่างไร
+- **Overview:** Overall progress, status and next work.
+- **Plans:** Agreements the team must follow.
+- **Reports:** Observed results, such as evaluation, load tests and recovery.
+- **README:** What a new user needs and how to run the project after cloning.
 
-ตัวอย่างเช่น “ระบบต้องคืน `503` เมื่อ model ไม่พร้อม” เป็นข้อตกลง ส่วนหลักฐานต้องมาจากการทดลองจริงว่าเมื่อทำให้ model โหลดไม่ได้ ระบบคืน `503` ตามที่กำหนด ตัวอย่างนี้ไม่ได้อ้างว่าเราทดลองแล้ว
+“The system must return `503` when the model is unavailable” is an agreement. Evidence must show that it actually returns `503` when model loading is deliberately broken. This example does not claim that test has run.
 
-สร้างโฟลเดอร์เมื่อมีงานหรือไฟล์ที่จะใช้จริง ไม่สร้างโฟลเดอร์เปล่ารอล่วงหน้า ไฟล์ build, dependencies และ CI จะเพิ่มเมื่อถึงงานที่ใช้จริง
+Create folders when there is a real file or task for them. Add build files, dependencies and CI when needed.
 
-รายละเอียดทั้ง 3 เรื่องของ P01-T03 ใช้ไฟล์นี้เป็นแหล่งข้อตกลงเดียว ไม่สร้างเอกสารใหม่แยกทุกหัวข้อ
+This file holds all three P01-T03 agreements. Do not create a separate document for every topic.
 
-## 9. จุดตรวจและหลักฐานตามเกณฑ์อาจารย์
+## 9. Checks and evidence for the course criteria
 
-อิงจาก [เกณฑ์ capstone ของอาจารย์](https://github.com/pasdptt/public_teaching_mlaiops/blob/2e29fae/course/project/project-brief.md) ตารางนี้คือวิธีที่เราตกลงจะใช้ตรวจ FeedbackPulse ให้ตรงกับเกณฑ์ ไม่ใช่ผลทดสอบที่ผ่านแล้ว และไม่ใช่การเพิ่ม feature ใหม่
+Based on the [instructor's capstone brief](https://github.com/pasdptt/public_teaching_mlaiops/blob/2e29fae/course/project/project-brief.md), this table records the agreed checks for FeedbackPulse. These are not recorded passes or new features.
 
-| เกณฑ์ | เราต้องพิสูจน์อะไร | หลักฐานที่จะเก็บ |
+| Criterion | What we must show | Evidence to keep |
 |---|---|---|
-| **R1 — Reproducible ML Pipeline** | รันขั้นตอน prepare → evaluate → package → register ซ้ำได้ และย้อนจาก model ที่ deploy ไปหา code, data และ model ต้นทางรุ่นที่ใช้ได้ | วิธีรันซ้ำ, ผล evaluation, version/hash, run ID และ lineage |
-| **R2 — Deployment & CI/CD** | API ทำตาม P01-T02; tests บล็อกการเปลี่ยนแปลงที่ผิด งานที่ผ่าน deploy ได้ และ rollback กลับรุ่นก่อนหน้าได้จริง | ผล tests, ลิงก์ CI run, deployment revision ก่อน–หลัง rollback และผลเรียก API |
-| **R3 — Monitoring & Reliability** | Dashboard แสดงการใช้งานจริง และมีอย่างน้อยหนึ่ง alert ที่ส่งการแจ้งเตือนได้จริง | Dashboard/alert configuration, จำนวน request, latency, error และหลักฐานการแจ้งเตือนพร้อมเวลา |
-| **R4 — Failure Handling & Technical Defense** | เมื่อจงใจทำให้ model artifact ใช้งานไม่ได้ ระบบไม่คืนผลทำนายปลอม ตรวจพบปัญหาและกู้กลับได้ แล้วนำสิ่งที่เรียนรู้ไปเพิ่มหรือปรับ regression test | ลำดับเหตุการณ์, ผล readiness/API ก่อน–ระหว่าง–หลังเหตุขัดข้อง และ regression test ที่เกี่ยวข้อง |
-| **R5 — Documentation & Presentation** | คนอื่นทำตาม README ได้ เข้าใจข้อจำกัดของ model และตรวจที่มาของต้นทุนได้ | ผลจาก fresh clone, model card หนึ่งหน้า, ต้นทุนต่อ 1,000 predictions พร้อมวิธีคำนวณ และหลักฐาน teardown |
-| **Live demo / defense** | ทีมสาธิตระบบ เหตุขัดข้อง และการรับมือ input ที่ไม่คาดไว้ได้ พร้อมอธิบายเหตุผลของสิ่งที่เลือก | เตรียมและซ้อม demo 8 นาที พร้อม Q&A 5 นาที |
+| **R1 — Reproducible ML Pipeline** | Repeat prepare → evaluate → package → register and trace a deployed model to its code, data and upstream model revision | Reproduction steps, evaluation results, versions/hashes, run ID and lineage |
+| **R2 — Deployment & CI/CD** | Follow P01-T02; tests block faulty changes, passing changes deploy, and rollback to an earlier release works | Test results, CI links, revisions before/after rollback and API results |
+| **R3 — Monitoring & Reliability** | A dashboard shows real usage and at least one alert actually sends a notification | Dashboard/alert configuration, request counts, latency, errors and timestamped notification evidence |
+| **R4 — Failure Handling & Technical Defense** | Deliberately make the model artifact unavailable; do not return fake predictions; detect the problem, recover, and use the lesson to add or improve a regression test | Event sequence, readiness/API results before/during/after the failure and the related regression test |
+| **R5 — Documentation & Presentation** | Others can follow the README, understand model limits and trace cost calculations | Fresh-clone results, a one-page model card, cost per 1,000 predictions with calculations, and teardown evidence |
+| **Live demo / defense** | Demonstrate the system, failure and unexpected-input handling, and explain the choices | Prepare and rehearse an 8-minute demo with 5 minutes of Q&A |
 
-สำหรับ R1 เราทำซ้ำ workflow ที่นำ pretrained model มาใช้ ไม่ได้อ้างว่าทำซ้ำการ train model ต้นฉบับได้ ขอบเขตนี้ยึดตามคำยืนยันของอาจารย์ที่ผู้ใช้แจ้งไว้ใน [overview](../../overview-plan.md)
+For R1, we reproduce the workflow that uses a pretrained model. We do not claim to reproduce its original training. This follows the instructor's approval as reported by the user in the [overview](../../overview-plan.md).
 
-## 10. จุดตรวจที่ต้องไม่หลุดระหว่างทำงาน
+## 10. Checks to keep in view
 
-- **Performance:** เป้าจาก proposal คือ end-to-end p95 ไม่เกิน 3 วินาที ที่ 2 concurrent requests เมื่อ model โหลดแล้ว รายงาน cold start และ error rate แยกด้วย ตัวเลขนี้เป็นเป้าหมาย ยังไม่ใช่ผลวัดจริง
-- **Portability:** แยก core, configuration และ cloud adapter ตามกติกาวิชา และต้องผ่าน `make portability-audit` เมื่อพัฒนาส่วนที่เกี่ยวข้องแล้ว ตอนนี้ยังไม่ได้สร้างหรือรันคำสั่งนี้
-- **Secrets:** ตรวจทั้ง Git history และ Docker image ว่าไม่มี credentials ไม่ถือว่ามี `.gitignore` แล้วแปลว่าปลอดภัยครบ
-- **Reproduction:** README ต้องบอกวิธีดึง data/model และสิทธิ์ที่ต้องใช้ ไม่พึ่งไฟล์ที่มีเฉพาะเครื่องผู้พัฒนา
-- **Teardown:** มีทั้งวิธีลบทรัพยากรและหลักฐานตรวจหลังลบจริงเมื่อจบการใช้งาน ไม่ใช่เขียนคำสั่งไว้เฉย ๆ
-- **ค่าที่ยังต้องตรวจใน P02:** ~~เพดานความยาวข้อความกับค่า tolerance~~ → **ตรวจครบแล้วเมื่อ 2026-10-07** · เพดาน 510 content tokens (รวม special tokens เป็น 512) ดู [P01-T02 §7](P01-T02-api-contract.md#7-จุดที่ยังต้องยืนยันและการส่งต่องาน) และ [หลักฐาน ส่วนที่ 3](../../reports/P02-evidence.md) · tolerance ของการ evaluate ซ้ำ กำหนดจากผลวัด 6 รอบ ดู [หลักฐาน ส่วนที่ 2](../../reports/P02-evidence.md) · กติกา "ไม่เดาตัวเลขล่วงหน้า" ยังใช้กับค่าที่วัดใหม่ในอนาคต
+- **Performance:** The proposal targets end-to-end p95 within 3 seconds at 2 concurrent requests after model loading. Report cold start and error rate separately. This is a target, not a measured result.
+- **Portability:** Separate core code, configuration and cloud adapters as required by the course. Pass `make portability-audit` after implementing the relevant parts. At this planning stage, the command had not been created or run.
+- **Secrets:** Check both Git history and the Docker image for credentials. Having `.gitignore` is not enough.
+- **Reproduction:** The README must explain how to obtain data/model files and what access is needed, without relying on developer-only files.
+- **Teardown:** Provide removal steps and evidence of the state after actual cleanup when usage ends, not just a written command.
+- **Values to check in P02:** ~~Text limit and tolerance~~ → **checked on 2026-10-07**. The limit is 510 content tokens, or 512 with special tokens; see [P01-T02 §7](P01-T02-api-contract.md#7-open-points-and-handoff) and [evidence, section 3](../../reports/P02-evidence.md). Repeat-evaluation tolerance came from 6 measured runs; see [evidence, section 2](../../reports/P02-evidence.md). The rule against guessing measured values still applies to future checks.
 
-## 11. วิธีเก็บหลักฐานให้สั้นแต่ตรวจได้
+## 11. Keep evidence short and checkable
 
-หลักฐานแต่ละชุดควรตอบให้ได้ว่า:
+Each evidence set should answer:
 
-> ตรวจอะไร → ใช้รุ่นและเงื่อนไขไหน → คาดหวังอะไร → ได้ผลอะไร → มีข้อจำกัดอะไร
+> What was checked → which version and conditions → expected result → actual result → limitations
 
-เก็บผลสรุปที่จำเป็นใน `reports/` เมื่อมีการทดลองจริง แล้วลิงก์จาก README ตามหน้าที่เอกสารในส่วนที่ 8 ไม่สร้างรายงานยาวแยกทุกคำสั่ง และไม่เก็บ secret หรือข้อมูลอ่อนไหวในหลักฐาน
+Save useful summaries in `reports/` after real experiments, and link them from the README as described in section 8. Do not write a long report for every command or include secrets or sensitive data.
 
-หลักฐานหนึ่งชุดใช้ตอบหลายเกณฑ์ได้ เช่น การทดลองให้ model โหลดไม่ได้ชุดเดียวอาจใช้แสดงทั้งการแจ้งเตือนใน R3 และการกู้ระบบใน R4 ไม่ต้องสร้างเหตุขัดข้องซ้ำเพียงเพื่อแยกรายงาน
+One experiment may support several criteria. For example, a model-loading failure could show both the R3 alert and R4 recovery. Do not repeat an incident only to split its reports.
 
-## 12. สิ่งที่ยังไม่ lock และงานคุยถัดไป
+## 12. Open decisions and next steps
 
-ยังไม่ lock รายละเอียดต่อไปนี้จนกว่าจะมีข้อมูลจากการตรวจ model และการทดลอง · **รายการแรกปิดแล้วใน P02** ที่เหลือยังเปิดอยู่:
+Wait for model inspection and experiments before fixing these details. **The first item was resolved in P02**; the other items remained open in this record:
 
-- ~~บริการหรือรูปแบบเก็บ model artifact~~ → **ตัดสินแล้ว 2026-10-07: ใส่ชุด artifact เข้า container image ตอน build ไม่ใช้ blob storage แยก** · เหตุผลหลักคือรักษาการผูกที่ `model_version` อ้างไว้ให้เป็นจริง (artifact ที่สลับได้ตอน runtime จะทำให้ version อ้างการผูกที่ไม่มีอะไรบังคับ) และทำให้ rollback ย้อนสิ่งเดียว · ดู [reports/P02-evidence.md ส่วนที่ 7](../../reports/P02-evidence.md)
-- วิธีนำไฟล์ model เข้า container เช่น ใส่มาตอน build หรือดาวน์โหลดตอนเริ่มทำงาน
-- จำนวน CPU และ RAM
-- จำนวน process และ instance ที่จะใช้
+- ~~Shared model artifact storage~~ → **decided on 2026-10-07: put the artifact in the container image at build time, without separate blob storage**. This keeps the binding claimed by `model_version` true: replacing an artifact at runtime would leave that binding unenforced. It also makes rollback one operation. See [P02 evidence, section 7](../../reports/P02-evidence.md).
+- How to bring model files into the container, such as including them at build time or downloading at startup.
+- CPU and RAM allocation.
+- Process and instance counts.
 
-ส่วนเพดานความยาวข้อความบันทึกไว้ที่ [P01-T02 ส่วนที่ 7](P01-T02-api-contract.md#7-จุดที่ยังต้องยืนยันและการส่งต่องาน) เพื่อไม่บันทึกสถานะซ้ำ
+The text limit is recorded in [P01-T02 section 7](P01-T02-api-contract.md#7-open-points-and-handoff) instead of duplicating its status here.
 
-**การส่งต่องาน:** **P02 เสร็จแล้ว** เพื่อนในทีมจะรับ P03 ไปดำเนินการต่อ ตาม [overview](../../overview-plan.md) งานรอบนี้ P02 เติมค่าที่ P01 เว้นไว้ให้ครบ (เพดานข้อความ, tolerance, ที่เก็บ artifact) และบันทึกหลักฐานไว้ให้ทีมใช้ร่วมกัน โดยไม่เริ่ม P03
+**Handoff:** **P02 was completed**, and a teammate would take P03 next, as recorded in the [overview](../../overview-plan.md). P02 filled in the values left open by P01—text limit, tolerance and artifact storage—and recorded evidence for the team, without starting P03.
 
-รายการที่เหลือในส่วนนี้เป็นของ P03–P04 · ผลวัดที่ P02 มีให้ใช้อยู่ใน [reports/P02-evidence.md ส่วนที่ 6](../../reports/P02-evidence.md) — peak RSS ขึ้นถึง **783 MiB** เมื่อรับข้อความยาวที่สุดที่ API ยอมรับ **ไม่ใช่ 341 MiB หลังโหลด** (ค่าสูงสุดจาก 10 ตัวอย่างที่ความยาวเพดาน ให้ยึดค่าสูงสุดไม่ใช่ค่ากลาง) · **วัดบน macOS ไม่ใช่ในคอนเทนเนอร์ จึงต้องวัดซ้ำก่อนใช้ตัดสิน** และ P02 ไม่มีข้อมูลเรื่อง CPU, จำนวน process หรือ instance
+The remaining decisions belong to P03–P04. [P02 evidence, section 6](../../reports/P02-evidence.md) reports peak RSS of **783 MiB** for maximum-length API inputs, **not the 341 MiB measured after loading**. This is the maximum across 10 boundary-length samples; use the maximum, not the median. **These measurements were on macOS, not in a container, and need rechecking before a sizing decision.** P02 did not provide CPU, process-count or instance-count measurements.
 
-P01-T03 ตกลงครบทั้ง 3 เรื่องในระดับแผนแล้ว ส่วนสถานะรวม P01 และงานที่ยังค้างติดตามใน [overview](../../overview-plan.md) การบันทึกนี้ไม่ได้อนุญาตให้เริ่มพัฒนา สร้าง cloud resource หรือ commit/push โดยอัตโนมัติ
+All three P01-T03 planning decisions were agreed. Overall P01 status and open work remain in the [overview](../../overview-plan.md). This record does not automatically authorize implementation, cloud resource creation or commit/push.

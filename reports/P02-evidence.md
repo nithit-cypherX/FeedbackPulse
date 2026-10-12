@@ -1,82 +1,82 @@
-# P02 — หลักฐานของ pipeline ที่ทำซ้ำได้
+# P02 — Evidence for the reproducible pipeline
 
-รายงานนี้คือ **ผลที่วัดและรันจริง** ของ P02 ทั้งเฟส · ข้อตกลงและสถานะ task อยู่ใน [phase plan](../docs/plans/P02-model-pipeline.md) ไม่เล่าซ้ำที่นี่
+This report records **actual P02 runs and measurements**. Agreements and task status are in the [phase plan](../docs/plans/P02-model-pipeline.md), rather than repeated here.
 
-| | ค่าของรอบที่ลงทะเบียนไว้ |
+| | Registered run value |
 |---|---|
 | `model_version` | **`sentiment-6e7ff9fbc17c-0110c462`** |
 | `run_id` | `run-20261007T192531Z-d36357` |
 | Code commit | `bbe375df940dc5a8b0d1bd716cf94c7ac15dcb92` |
-| ผล evaluation บน 14,640 แถว | **accuracy `0.8100409836065574` · macro-F1 `0.7605863552090412`** |
+| Evaluation on 14,640 rows | **accuracy `0.8100409836065574` · macro-F1 `0.7605863552090412`** |
 | Registry entry | [`registry/sentiment-6e7ff9fbc17c-0110c462.json`](registry/sentiment-6e7ff9fbc17c-0110c462.json) |
 
-**เครื่องที่วัดทุกค่าในรายงานนี้:** macOS 15.5 arm64 · Python 3.13.11 · `torch 2.14.1` · `transformers 5.19.0` · `numpy 2.5.3` · `tokenizers 0.23.2` · `safetensors 0.8.0` · **ไม่ใช่ในคอนเทนเนอร์และไม่ใช่บน Azure** — ดูส่วนที่ 8
+**Machine used for all measurements in this report:** macOS 15.5 arm64 · Python 3.13.11 · `torch 2.14.1` · `transformers 5.19.0` · `numpy 2.5.3` · `tokenizers 0.23.2` · `safetensors 0.8.0` · **Not in a container or on Azure** — see section 8.
 
 ---
 
-## 1. วิธีรันซ้ำ
+## 1. How to reproduce
 
-### ขั้นตอนทั้งสี่
+### Four steps
 
 ```bash
 uv sync --frozen                                              # prepare: environment
-PYTHONPATH=src uv run python -m feedbackpulse.evaluate         # prepare: model + data, แล้ว evaluate
+PYTHONPATH=src uv run python -m feedbackpulse.evaluate         # prepare: model + data, then evaluate
 PYTHONPATH=src uv run python -m feedbackpulse.package_artifact # package
 PYTHONPATH=src uv run python -m feedbackpulse.registry         # register
 ```
 
-`evaluate` ดึง model และ dataset ให้เองถ้ายังไม่มีในเครื่อง จึงไม่มีขั้น prepare แยกเป็นคำสั่งที่ห้า
+`evaluate` downloads the model and dataset if they are missing, so there is no separate fifth preparation command.
 
-**ต้องใช้ `PYTHONPATH=src`** — `pythonpath` ใน `pyproject.toml` มีผลกับ pytest เท่านั้น ไม่มีผลกับ `python -m` · ตรงกับที่ container ใช้ `PYTHONPATH=/app/src`
+**`PYTHONPATH=src` is required.** The `pythonpath` setting in `pyproject.toml` applies only to pytest, not `python -m`. This matches the container's `PYTHONPATH=/app/src`.
 
-### รอบล่าสุดรันจาก fresh state จริง
+### Latest run started from a fresh state
 
-ลบ `.venv` (778 MB), HF cache (479 MB) และ `artifacts/` (477 MiB) ทิ้งก่อน แล้วรันทั้งสี่ขั้นใหม่ · `artifact_id` ที่ได้หลัง build ใหม่ทั้งชุดคือ **`sentiment-6e7ff9fbc17c` ค่าเดิม** และ metric ตรงกับรอบก่อนทุกหลัก
+Removed `.venv` (778 MB), the HF cache (479 MB) and `artifacts/` (477 MiB), then reran all four steps. The rebuilt `artifact_id` was **the same: `sentiment-6e7ff9fbc17c`**, and every metric digit matched the previous run.
 
-### สิทธิ์ที่ต้องมี
+### Required access
 
-Kaggle API token · `kagglehub 1.0.2` อ่านจาก env `KAGGLE_USERNAME` + `KAGGLE_KEY`, env `KAGGLE_API_TOKEN`, ไฟล์ `~/.kaggle/kaggle.json` หรือ `KAGGLE_CONFIG_DIR` · สร้าง token ที่ <https://www.kaggle.com/settings/api>
+Kaggle API token: `kagglehub 1.0.2` reads `KAGGLE_USERNAME` + `KAGGLE_KEY`, `KAGGLE_API_TOKEN`, `~/.kaggle/kaggle.json` or `KAGGLE_CONFIG_DIR`. Create a token at <https://www.kaggle.com/settings/api>.
 
-**บันทึกเฉพาะวิธีได้มา ไม่เก็บค่า token** ที่ใดใน repo ตามจุดตรวจ Secrets ใน [P01-T03 §10](../docs/plans/P01-T03-system-structure.md#10-จุดตรวจที่ต้องไม่หลุดระหว่างทำงาน) · ค้น pattern `KGAT_…`, `KAGGLE_KEY=`, `KAGGLE_API_TOKEN=` ใน **ทุก commit ของ Git history** และในไฟล์ที่จะ commit → **ไม่พบ** · `git check-ignore` ยืนยันว่า `data/Tweets.csv` ถูกกันด้วย `.gitignore:31`
+**Record how to obtain the token, never its value** anywhere in the repo, following the Secrets check in [P01-T03 §10](../docs/plans/P01-T03-system-structure.md#10-checks-to-keep-in-view). Searched `KGAT_…`, `KAGGLE_KEY=`, `KAGGLE_API_TOKEN=` in **every Git-history commit** and files to commit: **no matches**. `git check-ignore` confirmed `data/Tweets.csv` is excluded by `.gitignore:31`.
 
-### ตัวกันไม่ให้รันผิดชุดโดยไม่รู้ตัว
+### Guards against silently using the wrong inputs
 
-| กลไก | ทำอะไร |
+| Guard | What it does |
 |---|---|
-| `dataset.verify()` | ตรวจ sha256 ของ `data/Tweets.csv` ก่อนเริ่มทุกรอบ · **โยน `DatasetMismatch`** ถ้าไม่ตรง |
-| `snapshot_download(revision=…)` | ดึงเฉพาะ 6 ไฟล์ที่ pin ไว้จาก commit SHA ไม่ใช่ tag |
-| `register()` ปฏิเสธ | 5 เงื่อนไขในส่วนที่ 5 |
+| `dataset.verify()` | Checks `data/Tweets.csv` SHA-256 before every run; **raises `DatasetMismatch`** on mismatch |
+| `snapshot_download(revision=…)` | Downloads only the 6 pinned files from a commit SHA, not a tag |
+| `register()` rejection | Five conditions in section 5 |
 
-**ข้าม `tf_model.h5` และ `.gitattributes`** เพราะเป็น TensorFlow weights และ metadata ของ Git ที่ไม่ใช้ ประหยัดการดาวน์โหลดไปราว 500 MB · ผลข้างเคียงที่ต้องรู้: `snapshot_download(..., local_files_only=True)` จะ error ว่า snapshot ไม่ครบถ้าไม่ส่ง `allow_patterns` ชุดเดิม
+**Skip `tf_model.h5` and `.gitattributes`**: unused TensorFlow weights and Git metadata. This saves about 500 MB of downloads. One caveat: `snapshot_download(..., local_files_only=True)` reports an incomplete snapshot unless given the same `allow_patterns`.
 
 ---
 
-## 2. ผล evaluation
+## 2. Evaluation results
 
-**14,640 แถว · ข้ามไป 0 แถว** · ใช้ทุกแถวในไฟล์ ไม่ sample ไม่ split ไม่กรอง จึง**ไม่มี random seed เกี่ยวข้องกับการเลือกแถว**
+**14,640 rows · 0 skipped.** Used every row, with no sampling, splitting or filtering, so **row selection has no random seed**.
 
-| การตัดสิน | เหตุผล |
+| Decision | Reason |
 |---|---|
-| ไม่ sample ใช้ทั้งไฟล์ | ไม่ต้องพึ่ง random seed ชุดทดสอบจึงนิ่งและเทียบสองรอบได้ตรง ๆ |
-| ไม่ split train/test | ไม่ได้ train หรือ fine-tune ตาม [Proposal §2](../PROPOSAL.md#2-model-and-dataset) จึงไม่มีเหตุต้องกันข้อมูลไว้ |
-| ไม่กรองด้วย `airline_sentiment_confidence` | การเลือกเกณฑ์กรองเป็นดุลพินิจของเรา ถ้ากรองจะทำให้ตัวเลขดูดีขึ้นโดยไม่มีฐาน |
+| Use the whole file, no sampling | No random seed needed; the evaluation set stays fixed for direct comparison between runs |
+| No train/test split | No training or fine-tuning under [Proposal §2](../PROPOSAL.md#2-model-and-dataset), so no data needs holding out for training |
+| No `airline_sentiment_confidence` filter | A cutoff would be our own choice and could make the scores look better without a justified basis |
 
-### เทียบกับ baseline
+### Baseline comparison
 
-ไม่มีเป้าตัวเลขที่เอกสารกำหนดล่วงหน้า — Proposal ไม่ได้ตั้งเกณฑ์คุณภาพ จึงใช้ **baseline ที่คำนวณจาก class balance** เป็นจุดเทียบ: ตอบ `negative` ทุกข้อ
+There was no predefined quality target in the Proposal. We therefore compare against a **class-balance baseline**: predict `negative` for every row.
 
-| Metric | ค่าที่วัดได้ | baseline เดา `negative` ทุกข้อ |
+| Metric | Measured | Always-`negative` baseline |
 |---|---:|---:|
 | Accuracy | **0.8100** | 0.6271 |
-| **Macro-F1** (metric หลัก) | **0.7606** | 0.2569 |
+| **Macro-F1** (main metric) | **0.7606** | 0.2569 |
 | Macro precision | 0.7453 | — |
 | Macro recall | 0.7825 | — |
 
-**ทำไม macro-F1 เป็นตัวหลัก:** evaluation set เป็น `negative` 62.7% การอ่าน accuracy อย่างเดียวจะทำให้ model ที่ละเลยสองกลุ่มเล็กดูดีเกินจริง — เดา `negative` ทั้งหมดก็ได้ accuracy 0.6271 แล้ว
+**Why macro-F1 is the main metric:** 62.7% of the evaluation set is `negative`. Accuracy alone can make a model that ignores the two smaller classes look too good: always predicting `negative` already gets 0.6271 accuracy.
 
 ### Per-class
 
-| Label | Precision | Recall | F1 | support | สัดส่วนใน dataset |
+| Label | Precision | Recall | F1 | support | Dataset share |
 |---|---:|---:|---:|---:|---:|
 | `negative` | 0.9153 | 0.8599 | 0.8867 | 9,178 | 62.7% |
 | `neutral` | 0.6163 | 0.6137 | **0.6150** | 3,099 | 21.2% |
@@ -84,7 +84,7 @@ Kaggle API token · `kagglehub 1.0.2` อ่านจาก env `KAGGLE_USERNAME
 
 ### Confusion matrix
 
-แถว = label จริง · คอลัมน์ = ที่ model ทำนาย
+Rows = true labels · columns = model predictions.
 
 | | → negative | → neutral | → positive |
 |---|---:|---:|---:|
@@ -92,408 +92,408 @@ Kaggle API token · `kagglehub 1.0.2` อ่านจาก env `KAGGLE_USERNAME
 | **neutral** | 650 | **1,902** | 547 |
 | **positive** | 80 | 218 | **2,065** |
 
-`neutral` เป็นกลุ่มที่อ่อนที่สุด (F1 0.6150) และความผิดพลาดกระจายไปทั้งสองทาง — 650 แถวที่เป็น `neutral` ถูกทำนายเป็น `negative` และ 547 แถวเป็น `positive` · ส่วน `positive` มี recall สูง (0.8739) แต่ precision ต่ำกว่า (0.7043) เพราะรับ `neutral` เข้ามาผิด 218 แถว
+`neutral` is the weakest class (F1 0.6150), with errors in both directions: 650 neutral rows were predicted as negative and 547 as positive. `positive` has high recall (0.8739) but lower precision (0.7043), because 547 neutral and 320 negative rows were predicted as positive. The 218 figure is positive rows predicted as neutral.
 
-### การยืนยันที่ไม่ใช่การรันตรรกะเดิมซ้ำ
+### Independent cross-checks
 
-**ยืนยันด้วยการคำนวณคนละทาง ไม่ใช่รันตรรกะเดิมซ้ำ — ผ่าน 15/15**
+**Checked through a different calculation path, not just rerunning our own logic: 15/15 passed.**
 
-| ประเภท | ตรวจอะไร | ผล |
+| Type | Check | Result |
 |---|---|---|
-| **ไบต์ต้นทาง** | ไฟล์ model ที่ดาวน์โหลดใหม่หลังลบ cache ตรงกับ sha256 ในส่วนที่ 3 | 5/5 ตรง |
-| **Invariant จากข้อมูล** | `support` ของแต่ละ label เท่ากับจำนวนที่นับจาก CSV ด้วย stdlib `csv` **โดยไม่ผ่านโค้ด metric ของเรา** | 9,178 / 3,099 / 2,363 ตรง |
-| **Invariant จากข้อมูล** | `total` เท่ากับจำนวนแถวใน CSV | 14,640 ตรง |
-| **Invariant ภายใน** | ผลรวมทุกช่องของ confusion = `total` · ผลรวมแต่ละแถว = `support` · `trace/total` = accuracy · `correct` = trace | 4/4 ตรง |
-| **Reference result** | คำนวณ macro-F1 และ per-class ใหม่จาก confusion matrix ด้วย `scikit-learn 1.9.1` | ตรงถึง 1e-12 ทุกค่า |
+| **Source bytes** | Model files downloaded after clearing the cache match the SHA-256 values in section 3 | 5/5 match |
+| **Data invariant** | Each label's `support` matches counts read from CSV with stdlib `csv`, **without our metric code** | 9,178 / 3,099 / 2,363 match |
+| **Data invariant** | `total` matches the CSV row count | 14,640 matches |
+| **Internal invariant** | Sum of confusion cells = `total`; each row sum = `support`; `trace/total` = accuracy; `correct` = trace | 4/4 match |
+| **Reference result** | Recalculate macro-F1 and per-class metrics from the confusion matrix with `scikit-learn 1.9.1` | All values match within 1e-12 |
 
-`scikit-learn` ใช้แบบ ephemeral (`uv run --with scikit-learn`) **ไม่เพิ่มเข้า lockfile** เพราะใช้ตรวจเท่านั้น ไม่ใช่ของที่ runtime ต้องมี
+Used `scikit-learn` ephemerally (`uv run --with scikit-learn`), **without adding it to the lockfile**, because it was only a verification tool, not a runtime dependency.
 
-### Tolerance ของการรันซ้ำ — วัดจาก 7 รอบ
+### Repeat-run tolerance — measured across 7 runs
 
-เทียบ **confusion matrix หรือ metric รวมไม่เพียงพอ** — ผลรายแถวอาจต่างกันแบบหักล้างกันเองจนตัวเลขรวมยังตรง · `evaluate.py` จึงคำนวณ fingerprint รายแถว
+Matching the **confusion matrix or aggregate metrics is not enough**: row-level differences can cancel out. `evaluate.py` therefore computes a row-level fingerprint.
 
 ```
-predictions_sha256 = sha256( "<index>\t<sentiment>\t<repr(score)>\n" ทุกแถวตามลำดับ )
+predictions_sha256 = sha256( "<index>\t<sentiment>\t<repr(score)>\n" for every row in order )
 ```
 
-ใช้ `repr()` ของ score เพื่อเทียบถึง **ระดับ bit ของ float** ไม่ใช่ทศนิยมที่ปัดแล้ว · `tests/test_evaluation.py` มี test ที่แสดงเคสที่ fingerprint มีไว้เพื่อจับ: ผลทำนายสองชุดที่ต่างกันทุกแถวแต่ได้ confusion matrix เดียวกัน
+Uses the score's `repr()` to compare the **full float value**, not rounded decimals. `tests/test_evaluation.py` includes the case this fingerprint should catch: two prediction sets that differ on every row but produce the same confusion matrix.
 
-ยืนยันซ้ำ **7 รอบ** บนเครื่องเดียวกัน รวม fresh-state rebuild (ลบ `.venv`+HF cache) และ build artifact ใหม่ทั้งชุด:
+Repeated **7 runs** on the same machine, including a fresh-state rebuild (removed `.venv` + HF cache) and a complete artifact rebuild:
 
-| ค่า | ความต่างที่วัดได้ |
+| Value | Measured difference |
 |---|---|
-| ผลทำนายรายแถว (`predictions_sha256`) | **0** — `05ddac7af1112f6c…5ad3b4` ตรงกันทุก bit |
-| accuracy, macro-F1, macro precision/recall, confusion matrix | **0** ทุกรอบ ถึงความละเอียดเต็มของ float |
-| แถวที่ข้าม | 0 ทุกรอบ |
-| **เวลารัน** | 351.4–678.9 วินาที → **ช่วง 93%, ไม่ใช่เกณฑ์ตัดสิน** |
+| Row-level predictions (`predictions_sha256`) | **0** — `05ddac7af1112f6c…5ad3b4` matches bit for bit |
+| Accuracy, macro-F1, macro precision/recall, confusion matrix | **0** across all runs, at full float precision |
+| Skipped rows | 0 in every run |
+| **Runtime** | 351.4–678.9 seconds → **93% range, not an acceptance criterion** |
 
-### Tolerance ที่กำหนด — เฉพาะเงื่อนไขที่วัดแล้ว
+### Chosen tolerance — only for measured conditions
 
-| สิ่งที่เทียบ | เกณฑ์ | ฐาน |
+| Compared item | Requirement | Basis |
 |---|---|---|
-| `predictions_sha256` | **ต้องตรงทุก bit** | วัดได้ 0 ความต่าง ข้าม fresh-state rebuild และข้ามการ build artifact ใหม่ |
-| accuracy, macro-F1, macro precision/recall | **ต้องตรงทุก bit** | วัดได้ 0 ความต่างใน 7 รอบ |
-| confusion matrix | **ต้องตรงทุกช่อง** | วัดได้ 0 ความต่างใน 7 รอบ |
-| จำนวนแถวที่ข้าม | **ต้องเป็น 0** | วัดได้ 0 ทุกรอบ |
-| เวลารัน | **ไม่ใช่เกณฑ์ตัดสิน** | ช่วง 93% |
+| `predictions_sha256` | **Exact match** | Zero measured difference across fresh-state and full artifact rebuilds |
+| Accuracy, macro-F1, macro precision/recall | **Exact match** | Zero measured difference in 7 runs |
+| Confusion matrix | **Every cell must match** | Zero measured difference in 7 runs |
+| Skipped rows | **Must be 0** | Zero in every run |
+| Runtime | **Not an acceptance criterion** | 93% range |
 
-**ความต่างใดก็ตามในสี่แถวแรกถือเป็นสัญญาณที่ต้องสอบ ไม่ใช่ noise** · เหตุผลที่ตั้งเข้มได้คือ inference เป็น deterministic และไม่มีการสุ่มที่ไหนเลย ดังนั้นถ้าเลขขยับ แปลว่ามีอะไรเปลี่ยนจริง — เวอร์ชัน dependency, ไฟล์ model หรือโค้ด
+**Any difference in the first four rows needs investigation, not dismissal as noise.** This strict rule is based on deterministic inference with no sampling. A change points to a changed dependency, model file or code.
 
-**ไม่กำหนด tolerance สำหรับ platform อื่นเพราะไม่มีหลักฐาน** — ทดสอบเพียงเครื่องเดียว · การเปลี่ยน CPU architecture, OS, build ของ `torch` หรือ BLAS backend เปลี่ยนลำดับการบวกทศนิยมได้ ซึ่งทำให้ logits ขยับในระดับ bit สุดท้ายและ `predictions_sha256` ต่างทันทีแม้ sentiment ทุกแถวยังเหมือนเดิม · **นี่เป็นการให้เหตุผล ไม่ใช่ผลวัด**
+**No tolerance is set for other platforms because we have no measurements for them.** Only one machine was tested. A different CPU architecture, OS, `torch` build or BLAS backend can change floating-point addition order, shifting the last bits of logits and changing `predictions_sha256` even if every sentiment label stays the same. **This is reasoning, not a measured result.**
 
 ---
 
-## 3. Version และ hash
+## 3. Versions and hashes
 
-### Model ต้นทาง
+### Upstream model
 
-| รายการ | ค่า |
+| Item | Value |
 |---|---|
-| Repo | `cardiffnlp/twitter-roberta-base-sentiment-latest` (ลิงก์จาก [Proposal §2](../PROPOSAL.md#2-model-and-dataset)) |
-| **Revision ที่ pin** | `3216a57f2a0d9c45a2e6c20157c20c49fb4bf9c7` — **commit SHA ไม่ใช่ tag ที่ขยับได้** |
-| Commit นี้แก้ล่าสุด | 2025-08-04 07:58:29 UTC |
-| Licence (จาก card metadata บน Hub) | `cc-by-4.0` **ตรงกับที่ Proposal §2 อ้าง** |
+| Repo | `cardiffnlp/twitter-roberta-base-sentiment-latest` (linked in [Proposal §2](../PROPOSAL.md#2-model-and-dataset)) |
+| **Pinned revision** | `3216a57f2a0d9c45a2e6c20157c20c49fb4bf9c7` — **commit SHA, not a movable tag** |
+| Commit last updated | 2025-08-04 07:58:29 UTC |
+| Licence (Hub card metadata) | `cc-by-4.0`, **matching Proposal §2** |
 | Architecture | `RobertaForSequenceClassification`, 12 layers, hidden 768, vocab 50265 |
 
 ### Evaluation dataset
 
-| รายการ | ค่า |
+| Item | Value |
 |---|---|
-| Dataset | `crowdflower/twitter-airline-sentiment` (ลิงก์จาก Proposal §2) |
-| **Version ที่ pin** | **4** |
+| Dataset | `crowdflower/twitter-airline-sentiment` (linked in Proposal §2) |
+| **Pinned version** | **4** |
 | Licence | CC BY-NC-SA 4.0 (**non-commercial + ShareAlike**) |
-| ไฟล์ที่ใช้ | `data/Tweets.csv` · 3,421,431 bytes · 14,640 แถว · 15 columns |
+| File used | `data/Tweets.csv` · 3,421,431 bytes · 14,640 rows · 15 columns |
 | **sha256** | `ea94b23f41892b290dec3330bb8cf9cb6b8bc669eaae5f3a84c40f7b0de8f15e` |
 
-### ชุด artifact
+### Artifact bundle
 
 `artifact_id` = **`sentiment-6e7ff9fbc17c`** · **477 MiB** · content-addressed:
 
 ```
-sentiment-<sha256(ของรายการ "ชื่อไฟล์:hash" ของไฟล์ใน model/ เรียงแล้ว) 12 ตัวแรก>
+sentiment-<first 12 characters of sha256(sorted "filename:hash" entries for files in model/)>
 ```
 
-คิด hash จากไฟล์ใน `model/` เท่านั้น ทำให้ `manifest.json` บันทึก id ของตัวเองได้โดยไม่วนซ้ำ · **input ชุดเดิมให้ id เดิมเสมอ** — ยืนยันแล้วจากรอบที่ 6 ที่ลบ `artifacts/` ทิ้งแล้ว build ใหม่ทั้งชุดและได้ id เดิม
+Only files in `model/` contribute to the hash, so `manifest.json` can record its own artifact ID without a circular dependency. **The same inputs always give the same ID**, confirmed in run 6 after deleting `artifacts/` and rebuilding the whole bundle.
 
 ```text
 artifacts/sentiment-6e7ff9fbc17c/
-├── manifest.json             lineage, hash ของทุกไฟล์, metadata
-├── upstream-model-card.md    model card ต้นทาง (เครดิตตาม CC BY 4.0) — loader ไม่อ่าน จึงไม่อยู่ใน model/
-└── model/                    สิ่งที่ loader อ่าน และไม่มีอะไรเกินนั้น
+├── manifest.json             lineage, every file's hash, metadata
+├── upstream-model-card.md    upstream model card (CC BY 4.0 attribution); outside model/ because the loader does not read it
+└── model/                    only files the loader reads
 ```
 
-| ไฟล์ | bytes | sha256 | ต้นทาง HF | ในชุด artifact |
+| File | bytes | sha256 | HF source | Artifact bundle |
 |---|---:|---|:---:|:---:|
 | `config.json` | 929 | `d2fba19997da698157196ba16f5fcb30a97a7551cef6845a0f3d743ee19c6129` | ✓ | ✓ `model/` |
 | `vocab.json` | 898,822 | `06b4d46c8e752d410213d9548eb27a54db70fda0319b6271fb8d59dead5e1cab` | ✓ | ✓ `model/` |
 | `merges.txt` | 456,318 | `1ce1664773c50f3e0cc8842619a93edc4624525b728b188a9e0be33b7726adc5` | ✓ | ✓ `model/` |
 | `special_tokens_map.json` | 239 | `378eb3bf733eb16e65792d7e3fda5b8a4631387ca04d2015199c4d4f22ae554d` | ✓ | ✓ `model/` |
-| model card · `README.md` ↔ `upstream-model-card.md` | 4,328 | `05ad85143ed60f0abe631ab935485db046c24710d9bec50829b017cfc1e12bf7` | ✓ | ✓ ราก |
-| `pytorch_model.bin` | 501,045,531 | `4d24a3e32a88ed1c4e5b789fc6644e2e767500554e954b27dccf52a8e762cbae` | ✓ | — แปลงแล้ว |
+| model card · `README.md` ↔ `upstream-model-card.md` | 4,328 | `05ad85143ed60f0abe631ab935485db046c24710d9bec50829b017cfc1e12bf7` | ✓ | ✓ root |
+| `pytorch_model.bin` | 501,045,531 | `4d24a3e32a88ed1c4e5b789fc6644e2e767500554e954b27dccf52a8e762cbae` | ✓ | — converted |
 | `model.safetensors` | 498,615,868 | `deece7c9f6d59c96ac2a9ef285a6b0f20f9bea463b90242a0578bdfae8010718` | — | ✓ `model/` |
-| `manifest.json` | — | `db8ceb69c7f6b291e1e5775c4c3c94ab94c9b09c8603aa4929d496993e1990d0` | — | ✓ ราก |
+| `manifest.json` | — | `db8ceb69c7f6b291e1e5775c4c3c94ab94c9b09c8603aa4929d496993e1990d0` | — | ✓ root |
 
-ห้าแถวแรกมี **hash เดียวกันทั้งสองฝั่ง** — ไฟล์ถูกคัดลอกทั้ง byte จึงตรวจย้อนจากชุด artifact ไปถึงต้นทางได้ตรง ๆ · `pytorch_model.bin` ไม่เข้าชุดเพราะแปลงเป็น safetensors แล้ว (ดูหัวข้อถัดไป)
+The first five rows have **the same hashes on both sides**: byte-for-byte copies that can be traced directly from artifact to source. `pytorch_model.bin` is excluded because it was converted to safetensors (next section).
 
-`labels` และ `max_content_tokens` ใน `manifest.json` **อ่านจาก loader ที่โหลดชุดที่ build เสร็จแล้ว** ไม่ได้คำนวณซ้ำใน packaging script · ทำให้ manifest รายงานตัวเลขของ loader เองและ **การ build ล้มทันทีถ้าชุดที่ประกอบขึ้นโหลดไม่ได้** · **ไม่บันทึกที่เก็บหรือ URL** เพื่อไม่ผูกกับการตัดสินในส่วนที่ 7
+`labels` and `max_content_tokens` in `manifest.json` are **read from the loader after loading the built bundle**, not recalculated by the packaging script. The manifest therefore reports the loader's own values, and **the build fails if the bundle cannot load**. **No storage location/URL is recorded**, keeping this independent of the decision in section 7.
 
 ### Environment
 
-| รายการ | ค่า |
+| Item | Value |
 |---|---|
 | `uv.lock` sha256 | `897a91df2d1fbc88d6a5fcb2fd4dc37c4affdd40be55b7ea293d88385797bb96` |
 | Python | `3.13.11` |
-| Package ที่กระทบ inference | `torch 2.14.1` · `transformers 5.19.0` · `numpy 2.5.3` · `tokenizers 0.23.2` |
+| Packages affecting inference | `torch 2.14.1` · `transformers 5.19.0` · `numpy 2.5.3` · `tokenizers 0.23.2` |
 
-### เพดานความยาวข้อความ — ค่าที่วัดได้
+### Text-length limit — measured result
 
-tokenizer เติม **2 tokens** ให้ทุกข้อความ: `<s>` ข้างหน้าและ `</s>` ข้างหลัง (`tok.num_special_tokens_to_add(pair=False) == 2`)
+The tokenizer adds **2 tokens** to each input: `<s>` before and `</s>` after (`tok.num_special_tokens_to_add(pair=False) == 2`).
 
-| total tokens (รวม special) | ผล forward |
+| Total tokens (including special tokens) | Forward result |
 |---:|---|
-| 510, 511 | ผ่าน |
-| **512** | **ผ่าน — ค่าสูงสุดที่ใช้ได้** |
-| 513, 514 | พัง `RuntimeError: index 514 is out of bounds for dimension 1 with size 514` |
+| 510, 511 | Pass |
+| **512** | **Pass — highest usable length** |
+| 513, 514 | Fails: `RuntimeError: index 514 is out of bounds for dimension 1 with size 514` |
 
-ยืนยันซ้ำด้วย **ข้อความจริงผ่าน tokenizer** ไม่ใช่สร้าง `input_ids` เอง: 1,527 อักขระ → 512 total / 510 content → ผ่าน · 1,530 อักขระ → 513 total / 511 content → พัง
+Confirmed again with **real text through the tokenizer**, not hand-built `input_ids`: 1,527 characters → 512 total / 510 content → pass; 1,530 characters → 513 total / 511 content → fail.
 
-สรุป: ความยาวลำดับรวมสูงสุด **512 tokens** · special tokens **2 ตัว** · **เนื้อหาสูงสุด 510 content tokens** นับด้วย tokenizer ของ revision ที่ pin **ไม่ใช่นับอักขระ**
+Result: maximum sequence length **512 tokens**, including **2 special tokens**, leaving **510 content tokens**, counted by the pinned revision's tokenizer, **not by character count**.
 
-**ทำไมอ่าน `tokenizer.model_max_length` ไม่ได้:** repo ของ model **ไม่มี `tokenizer_config.json`** ทำให้ค่านี้คืน sentinel `1000000000000000019884624838656` ซึ่งไม่ใช่เพดานจริง · ค่าที่เป็นหลักฐานคือ `max_position_embeddings = 514` ใน `config.json` (RoBERTa ใช้ 512 + 2 ตำแหน่งสำรอง) ประกอบกับการทดลองข้างบน
+**Why `tokenizer.model_max_length` cannot be used directly:** the model repo has **no `tokenizer_config.json`**, so it returns sentinel `1000000000000000019884624838656`, not a real limit. The supporting value is `max_position_embeddings = 514` in `config.json` (RoBERTa uses 512 + 2 reserved positions), together with the checks above.
 
-**แก้ช่องที่พังเงียบแล้ว:** `load()` ตั้ง `tokenizer.model_max_length` เป็นค่าที่ derive ได้ (512) · ก่อนแก้ ข้อความ 603 tokens เทียบกับ sentinel ให้ `False` คือ **ตรวจไม่เจอว่าเกินเพดาน** ทำให้ข้อความยาวเกินไปถึง model แล้วกลายเป็น `500` แทน `422`
+**Fixed the silent gap:** `load()` sets `tokenizer.model_max_length` to the derived value (512). Previously, comparing 603 tokens against the sentinel returned `False`, **missing the over-limit input**. It then reached the model and caused `500` instead of `422`.
 
-ตัวเลขยังมาจาก `config.json` ที่เดียวเหมือนเดิม · **ไม่ได้เพิ่ม `tokenizer_config.json` เข้าชุด** เพราะจะมีแหล่งความจริงสองที่ · บันทึก `max_content_tokens: 510` ใน `manifest.json` แทน · มี test กำกับ · **ที่ยังกันไม่ได้:** ใครเปิด `artifacts/<id>/model` ด้วย `AutoTokenizer` เองโดยไม่ผ่านโมดูลของเรา ก็ยังเจอ sentinel
+The value still comes only from `config.json`. **No `tokenizer_config.json` was added**, which would create a second source of truth. Instead, `manifest.json` records `max_content_tokens: 510`, covered by a test. **Remaining limit:** loading `artifacts/<id>/model` directly with `AutoTokenizer`, outside our module, still returns the sentinel.
 
-**tokenizer ไม่ตัดให้เอง ถ้าไม่สั่ง** — `tok(text)` คืน 513 ไม่ตัด · `tok(text, truncation=True, max_length=512)` คืน 512 ตัดจริง · `truncation=True` ทำสิ่งที่ [P01-T02 §3](../docs/plans/P01-T02-api-contract.md#3-request-และ-response) ห้ามไว้ → **โค้ดของเราไม่ใช้ `truncation=True`** นับแล้วปฏิเสธ
+**The tokenizer does not truncate unless asked.** `tok(text)` returns 513 without truncation; `tok(text, truncation=True, max_length=512)` returns 512 by cutting the input. `truncation=True` violates [P01-T02 §3](../docs/plans/P01-T02-api-contract.md#3-request-and-response), so **our code does not use `truncation=True`**: it counts and rejects.
 
-**นับอักขระแทน token ไม่ได้** — อัตราอักขระ/token ไม่คงที่ วัดได้ 0.52–3.98 ขึ้นกับภาษา (ภาษาไทยให้ token มากกว่าจำนวนอักขระ) เพดานแบบนับอักขระที่ตั้งจากกรณีภาษาอังกฤษจะปล่อยข้อความที่เกิน 512 tokens ผ่านไปได้
+**Characters cannot replace tokens.** The measured character/token ratio varies from 0.52–3.98 by language (Thai can produce more tokens than characters). A character limit based on English could let inputs over 512 tokens through.
 
-### Label mapping — อ่านจาก `config.json` ของ revision นี้โดยตรง
+### Label mapping — read directly from this revision's `config.json`
 
-| index | label ใน `config.json` | `airline_sentiment` ใน dataset |
+| index | Label in `config.json` | `airline_sentiment` in dataset |
 |---|---|---|
 | 0 | `negative` | `negative` |
 | 1 | `neutral` | `neutral` |
 | 2 | `positive` | `positive` |
 
-**ชื่อกลุ่มตรงตัวทั้งสามฝ่าย ไม่ต้องสร้างตารางแปลง** — แต่โค้ดอ่านชื่อกลุ่มจาก `config.json` ตอน runtime **ไม่ hardcode ลำดับ index** เพราะถ้าเปลี่ยน revision ลำดับอาจเปลี่ยน · มี test กำกับ (`test_labels_come_from_the_model_config`)
+**All three sources use matching label names, so no conversion table is needed.** The code still reads labels from `config.json` at runtime rather than hardcoding index order, which could change with a different revision. Covered by `test_labels_come_from_the_model_config`.
 
-**นิยามของ `score`:** `softmax(logits)` แล้วเอาค่าของ class ที่ `argmax` · ผลรวมของทุก class = `1.000000` ทุกตัวอย่าง จึงอยู่ในช่วง 0–1 ตามที่ [P01-T02 §3](../docs/plans/P01-T02-api-contract.md#3-request-และ-response) กำหนด
+**`score` definition:** apply `softmax(logits)` and take the `argmax` class's value. All class probabilities sum to `1.000000` in every example, keeping scores within 0–1 as required by [P01-T02 §3](../docs/plans/P01-T02-api-contract.md#3-request-and-response).
 
-**ข้อความอ้างอิง** ที่แต่งขึ้นเอง ใช้ยืนยันกลไกและเทียบข้ามขั้นตอน **ไม่ใช่ผล evaluation**: `"My flight was delayed and nobody helped me."` → `negative` score `0.943575` (probs 0.9436 / 0.0521 / 0.0044) — ค่านี้ถูกใช้ซ้ำในส่วนที่ 5 (ไล่ย้อน ชั้น 8) และส่วนที่ 9 (ตัวอย่าง interface)
+**Handwritten reference input**, used to check the mechanism across steps, **not an evaluation result**: `"My flight was delayed and nobody helped me."` → `negative`, score `0.943575` (probs 0.9436 / 0.0521 / 0.0044). Reused in section 5 (trace-back layer 8) and section 9 (interface example).
 
-### การแปลง weights เป็น safetensors
+### Convert weights to safetensors
 
-repo ต้นทางมีแต่ `pytorch_model.bin` ไม่มี `model.safetensors` · **ตัดสินใจแปลง** ด้วยเหตุผลเดียวที่เหลืออยู่:
+The upstream repo provides `pytorch_model.bin`, not `model.safetensors`. **We chose to convert it** for the remaining reason below:
 
-| เหตุผล | สถานะ |
+| Reason | Status |
 |---|---|
-| **ไม่ต้อง unpickle ตอนโหลด** | ใช้ได้ · `pytorch_model.bin` เป็น pickle ซึ่งรันโค้ดได้ตอน deserialize และ [Proposal §5](../PROPOSAL.md#5-planned-failure) ระบุว่า P05 จะ**ตั้งใจทำให้ artifact ใช้งานไม่ได้** การโหลดไฟล์ที่ถูกแก้ไขจึงไม่ควรเป็นการรันโค้ดจากไฟล์นั้น |
-| **ไม่เพิ่ม dependency** | ใช้ได้ · `safetensors 0.8.0` เป็น dependency ต่อเนื่องของ `transformers` อยู่แล้ว |
-| ~~โหลดเร็วกว่า~~ | **ถอนแล้ว** — วัดแล้วไม่ต่างกัน ทั้งเวลาและ RAM · ตัวเลขอยู่ใน ส่วนที่ 6 |
+| **No unpickling at load time** | Applies: `pytorch_model.bin` uses pickle, which can execute code during deserialization. [Proposal §5](../PROPOSAL.md#5-planned-failure) plans to deliberately make the artifact unusable in P05, so loading a modified file should not execute code from it |
+| **No extra dependency** | Applies: `safetensors 0.8.0` is already a transitive dependency of `transformers` |
+| ~~Faster loading~~ | **Withdrawn**: measured time/RAM did not differ; see section 6 |
 
-**ชุดนี้ไม่ใช่สำเนาของต้นทาง** — ต้นทางมี **204 tensor** ชุดที่เขียนลง safetensors มี **201 tensor** · ที่หายไป 3 ตัว:
+**This bundle is not an exact copy of the source.** The source has **204 tensors**; safetensors contains **201**. Three were omitted:
 
-- `roberta.embeddings.position_ids` — buffer ที่ `transformers` รุ่นนี้ไม่ได้เก็บแล้ว
-- `roberta.pooler.dense.weight` และ `.bias` — pooler ที่ sequence-classification head ไม่เรียกใช้ (ตรงกับที่ `transformers` รายงานเป็น `UNEXPECTED` ตอนโหลดต้นทาง — เป็นข้อสังเกต ไม่ใช่ปัญหา น้ำหนักส่วนที่ใช้ทำนายโหลดครบ)
+- `roberta.embeddings.position_ids` — a buffer this `transformers` version no longer saves.
+- `roberta.pooler.dense.weight` and `.bias` — the sequence-classification head does not use the pooler. This matches `transformers` reporting them as `UNEXPECTED` when loading upstream weights; it is an observation, not a failure. All weights used for prediction loaded.
 
-บันทึกทั้งสามตัวไว้ใน `manifest.json` และยืนยันว่าไม่กระทบผลด้วยการเทียบจริง:
+All three are recorded in `manifest.json`. Actual comparisons checked that predictions were unaffected:
 
-| ตรวจ | ผล |
+| Check | Result |
 |---|---|
-| `state_dict` จาก safetensors เทียบจาก `.bin` | key ตรงกันทั้ง 201 ตัว · **ทุก tensor เท่ากันทุก bit** |
-| logits บนข้อความจริง 300 แถวจาก evaluation set | ความต่างสูงสุด **0.000e+00** |
-| sentiment ที่ทำนายต่างกัน | **0 / 300** |
+| `state_dict` from safetensors vs `.bin` | All 201 keys match; **every tensor is bit-identical** |
+| Logits on 300 real evaluation rows | Maximum difference **0.000e+00** |
+| Different sentiment predictions | **0 / 300** |
 
-### โหลดได้โดยไม่พึ่งไฟล์นอกชุด
+### Load without files outside the bundle
 
-ตั้ง `HF_HOME` ชี้ไป directory ว่าง พร้อม `HF_HUB_OFFLINE=1` และ `TRANSFORMERS_OFFLINE=1` แล้วโหลดจาก `artifacts/sentiment-6e7ff9fbc17c/model`:
+Set `HF_HOME` to an empty directory, with `HF_HUB_OFFLINE=1` and `TRANSFORMERS_OFFLINE=1`, then load `artifacts/sentiment-6e7ff9fbc17c/model`:
 
-| ตรวจ | ผล |
+| Check | Result |
 |---|---|
-| `HF_HOME` ว่างจริงตอนรัน | ยืนยันด้วยการไล่ไฟล์ใน directory → ไม่มีไฟล์ |
-| `SentimentClassifier.load()` | สำเร็จ **ไม่แตะ cache และไม่ต่อ network** |
+| `HF_HOME` really empty during the run | Directory listing confirmed no files |
+| `SentimentClassifier.load()` | Succeeded **without cache or network access** |
 | `labels` | `('negative', 'neutral', 'positive')` |
 | `max_content_tokens` | **510** |
-| ทำนาย ข้อความอ้างอิง | `negative` `0.943575` ตรงกับที่บันทึกไว้ |
+| Predict the reference input | `negative` `0.943575`, matching the recorded value |
 
 ---
 
 ## 4. Run ID
 
-| สิ่งที่บันทึก | ค่าของรอบที่ลงทะเบียน | ระบุอะไร |
+| Recorded item | Registered run value | Identifies |
 |---|---|---|
-| `run_id` | `run-20261007T192531Z-d36357` | **การรันครั้งนั้น** · รูปแบบ `run-<UTC timestamp>-<สุ่ม 3 bytes>` |
-| `finished_utc` | `2026-10-07T19:38:39+00:00` | เวลาที่รันเสร็จ |
-| `seconds` | `643.5` | เวลาที่ใช้ |
-| `code.commit` | `bbe375df940dc5a8b0d1bd716cf94c7ac15dcb92` · `dirty: false` · `uncommitted: []` | **code รุ่นที่รัน** |
-| `predictions_sha256` | `05ddac7af1112f6c12267e820832a678b19155bd61fd55a67150e50b7e5ad3b4` | **ผลลัพธ์** ไม่ใช่การรัน |
-| sha256 ของสำเนาผล | `45338f35ce4ec5024a488ca7e3353fc8f4d7d1ac3f2e295ada429b4bbef324cb` | **ไฟล์ผลของรอบนี้** ที่เก็บข้าง registry entry |
+| `run_id` | `run-20261007T192531Z-d36357` | **That run**; format `run-<UTC timestamp>-<3 random bytes>` |
+| `finished_utc` | `2026-10-07T19:38:39+00:00` | Completion time |
+| `seconds` | `643.5` | Runtime |
+| `code.commit` | `bbe375df940dc5a8b0d1bd716cf94c7ac15dcb92` · `dirty: false` · `uncommitted: []` | **Code version used** |
+| `predictions_sha256` | `05ddac7af1112f6c12267e820832a678b19155bd61fd55a67150e50b7e5ad3b4` | **Output**, not the run |
+| Result-copy SHA-256 | `45338f35ce4ec5024a488ca7e3353fc8f4d7d1ac3f2e295ada429b4bbef324cb` | **This run's result file**, stored beside the registry entry |
 
-**ทำไมต้องมี `run_id` แยกจาก `predictions_sha256`** — pipeline เป็น deterministic จึงได้ `predictions_sha256` ค่าเดียวกันทุกรอบที่ input เหมือนกัน (ยืนยันแล้วในส่วนที่ 2) · มันจึงระบุ **ผลลัพธ์** ไม่ใช่ **การรัน** และแทน run ID ไม่ได้ · ส่วนสุ่มท้าย `run_id` ทำให้สองรอบที่เริ่มในวินาทีเดียวกันยังแยกกันได้
+**Why `run_id` is separate from `predictions_sha256`:** this deterministic pipeline gives the same prediction hash for the same inputs, as confirmed in section 2. That hash identifies the **output**, not **a run**, so it cannot replace a run ID. The random suffix distinguishes runs that start in the same second.
 
-`run_id` ถูกบันทึกทั้งในไฟล์ผล (`run.run_id`) และใน lineage ของ registry entry (`evaluation.run_id`) และ**ใช้เป็นชื่อสำเนาผล evaluation** ที่เก็บข้าง entry — ดูส่วนที่ 5
+`run_id` is saved in the result (`run.run_id`) and registry lineage (`evaluation.run_id`). It also **names the evaluation-result copy** stored beside the entry; see section 5.
 
 ---
 
 ## 5. Lineage
 
-### โครงสร้าง registry entry
+### Registry-entry structure
 
-`reports/registry/<model_version>.json` เก็บ 6 ส่วน:
+`reports/registry/<model_version>.json` stores 6 sections:
 
-| ส่วน | บันทึกอะไร |
+| Section | Records |
 |---|---|
-| `artifact` | `artifact_id`, hash ของ `manifest.json`, hash ของทุกไฟล์ในชุด |
-| `source_model` | repo, revision, licence, **hash ต้นทางของทุกไฟล์รวม `pytorch_model.bin`** |
-| `evaluation_data` | handle version 4, sha256, จำนวนแถว |
+| `artifact` | `artifact_id`, `manifest.json` hash and every bundled file's hash |
+| `source_model` | Repo, revision, licence and **source hashes for every file, including `pytorch_model.bin`** |
+| `evaluation_data` | Version-4 handle, SHA-256 and row count |
 | `code` | commit |
-| `environment` | Python, **hash ของ `uv.lock`**, เวอร์ชัน package ที่กระทบ inference |
-| `evaluation` | ชื่อสำเนาผล + hash, `run_id`, เวลารัน, accuracy, macro-F1 |
+| `environment` | Python, **`uv.lock` hash** and inference-package versions |
+| `evaluation` | Result-copy name/hash, `run_id`, runtime, accuracy and macro-F1 |
 
-**ไม่บันทึกที่เก็บหรือ URL** เพื่อไม่ผูกกับการตัดสินในส่วนที่ 7
+**No storage location/URL is recorded**, keeping this independent of section 7's decision.
 
 ### `model_version` scheme
 
 ```
 sentiment-6e7ff9fbc17c-0110c462
 │         │             │
-│         │             lineage digest 8 ตัว — sha256 ของ lineage record ทั้งก้อน
-│         │             (artifact, model ต้นทาง, dataset, code commit, environment, ผล evaluation)
-│         artifact_id — content-addressed จากไฟล์ใน model/
-model family — อ่านออกใน log และใน response body
+│         │             8-character lineage digest: SHA-256 of the full lineage record
+│         │             (artifact, upstream model, dataset, code commit, environment, evaluation result)
+│         artifact_id — content-addressed from files in model/
+model family — readable in logs and response bodies
 ```
 
-| สิ่งที่ตัดสิน | เหตุผล |
+| Decision | Reason |
 |---|---|
-| **3 ส่วน ไม่ใช่ hash ตัวเดียว** | `artifact_id` ตรงกลางทำให้เห็นทันทีว่าสอง release ใช้ weights ชุดเดียวกันหรือไม่ ซึ่งต้องอ่านเร็วตอน rollback (R2) · hash ตัวเดียวอ่านอะไรไม่ได้เลย |
-| **content-addressed ไม่ใช่ตัวนับ** | ไม่ต้องมีทะเบียนกลางแจกเลขถัดไป ซึ่งสำคัญตอนที่ยังไม่เลือกบริการเก็บ artifact |
-| **digest ครอบ code และ environment ไม่ใช่แค่ weights** | `predict()` ขึ้นกับโค้ดของเราด้วย · ถ้าเปลี่ยน preprocessing แล้ว version ไม่เปลี่ยน version นั้นจะโกหก |
-| **ยาว 31 อักขระ** | ใส่ใน JSON response และ log ได้โดยไม่เทอะทะ |
+| **3 parts, not one hash** | The middle `artifact_id` makes it easy to see whether two releases use the same weights, useful during rollback (R2). One hash hides that distinction |
+| **Content-addressed, not a counter** | No central service is needed to issue the next number, especially before choosing artifact storage |
+| **Digest covers code/environment, not only weights** | `predict()` also depends on our code. If preprocessing changes but the version does not, the version becomes misleading |
+| **31 characters long** | Fits JSON responses/logs without being unwieldy |
 
-**`model_version` เสถียรเมื่อ artifact และ input เหมือนเดิม แต่เปลี่ยนเมื่อรัน evaluation ใหม่** — `run_finished_utc` และ `result_sha256` อยู่ใน payload ที่ hash (และไฟล์ผลมี timestamp อยู่ข้างใน) ดังนั้นรัน `evaluate` ใหม่ก็ได้ digest ใหม่แม้ model, dataset, code และ lockfile ไม่เปลี่ยนเลย
+**`model_version` stays stable for the same artifact and inputs, but changes after a new evaluation run.** `run_finished_utc` and `result_sha256` are part of the hashed payload, and the result file contains a timestamp. Rerunning `evaluate` therefore produces a new digest even if model, dataset, code and lockfile are unchanged.
 
-**ยืนยันจากของจริง:** สามรอบติดกันให้ `…-c9386c0e`, `…-850de906` แล้ว `…-0110c462` โดย `artifact_id` เป็น `sentiment-6e7ff9fbc17c` ค่าเดิมทั้งสามรอบ · เลือกคงไว้แบบนี้เมื่อ 2026-10-07 ไม่แก้ digest · เงื่อนไขที่ P03–P04 ต้องทำตามอยู่ใน [phase plan §3](../docs/plans/P02-model-pipeline.md)
+**Observed result:** three consecutive runs produced `…-c9386c0e`, `…-850de906`, then `…-0110c462`, all with the same `artifact_id`, `sentiment-6e7ff9fbc17c`. On 2026-10-07 we chose to keep this behavior. P03–P04 requirements are in [phase plan §3](../docs/plans/P02-model-pipeline.md).
 
-### Registry ปฏิเสธมากกว่ายอมบันทึก
+### The registry rejects unsupported claims
 
-`register()` โยน `CannotRegister` แทนที่จะออก version ที่อ้างสิ่งที่พิสูจน์ไม่ได้ — ปฏิเสธถ้า code หรือ evaluation ยัง uncommitted, **ไฟล์ที่ตัดสินผลทำนาย** (`gitinfo.BEHAVIOUR_PATHS`) เปลี่ยนไปตั้งแต่ eval รัน, หรือ model revision/dataset ไม่ตรงกับที่ eval ใช้
+`register()` raises `CannotRegister` rather than issuing a version it cannot support. It rejects uncommitted code/evaluation, changes to **prediction-affecting files** (`gitinfo.BEHAVIOUR_PATHS`) since evaluation, and model-revision/dataset mismatches.
 
-**กลไกนี้ทำงานจริง ไม่ใช่แค่เขียนไว้** — เคยปฏิเสธการ register มาแล้วจริงเพราะ `inference.py`/`evaluate.py` เปลี่ยนไปตั้งแต่ eval รอบก่อน บังคับให้รัน evaluation ใหม่ก่อนจึง register ได้
+**This guard has actually fired.** Registration was rejected after `inference.py`/`evaluate.py` changed since the previous evaluation, requiring a new evaluation before registration.
 
-### ผลไล่ย้อนจาก `model_version` ค่าเดียว — 36/36
+### Trace-back from one `model_version` — 36/36
  
-เริ่มจากสตริง `sentiment-6e7ff9fbc17c-0110c462` อย่างเดียว แล้วไล่ย้อนทุกชั้น โดย **คำนวณ hash จากไฟล์จริงบน disk ทุกตัว ไม่ใช่อ่านค่าที่บันทึกไว้มาเทียบกับตัวเอง**
+Started with only `sentiment-6e7ff9fbc17c-0110c462`, then traced each layer, **recomputing hashes from real files on disk rather than comparing saved values with themselves**.
 
-| ชั้น | ตรวจอะไร | ผล |
+| Layer | Check | Result |
 |---|---|---|
-| 1 | **คำนวณ digest ใหม่จาก lineage ที่เก็บ แล้วได้ชื่อ version เดิม** · entry บันทึก `model_version` ตรงกับชื่อไฟล์ | 2/2 |
-| 2 | `manifest.json` + ไฟล์ในชุด 6 ไฟล์ hash ตรง · **คำนวณ `artifact_id` ใหม่จากไฟล์ใน `model/` ได้ค่าเดิม** | 8/8 |
-| 3 | revision ตรงกับที่ pin ในโค้ด · ไฟล์ต้นทาง 6 ไฟล์ hash ตรง | 7/7 |
-| 4 | handle ตรงกับที่ pin ในโค้ด · `data/Tweets.csv` hash ตรง | 2/2 |
-| 5 | commit มีอยู่จริง · อยู่ในสายของ `HEAD` · ไฟล์ที่ตัดสินผลทำนายไม่เปลี่ยนตั้งแต่นั้น | 3/3 |
-| 6 | `uv.lock` hash ตรง | 1/1 |
-| 7 | สำเนาผล evaluation ของ entry นี้มีอยู่และ hash ตรง · `run_id` ในสำเนาตรงกับ lineage · accuracy/macro-F1 ตรง · `predictions_sha256` อยู่ในสำเนา · eval รันบน commit เดียวกับ lineage · revision และ dataset ที่ eval ใช้ตรงกับ lineage | 8/8 |
-| 8 | โหลด artifact แล้วทำนายได้ (`negative` 0.943575) · คืน `model_version` ค่านี้ · `labels` และ `max_content_tokens` ตรงกับ manifest | 4/4 |
+| 1 | **Recompute the digest from stored lineage and get the same version**; entry `model_version` matches its filename | 2/2 |
+| 2 | `manifest.json` and 6 bundled-file hashes match; **recomputing `artifact_id` from `model/` files gives the same ID** | 8/8 |
+| 3 | Revision matches the code pin; 6 source-file hashes match | 7/7 |
+| 4 | Handle matches the code pin; `data/Tweets.csv` hash matches | 2/2 |
+| 5 | Commit exists, is in `HEAD` history, and prediction-affecting files have not changed since it | 3/3 |
+| 6 | `uv.lock` hash matches | 1/1 |
+| 7 | This entry's evaluation copy exists and its hash matches; `run_id`, accuracy/macro-F1 match lineage; copy contains `predictions_sha256`; evaluation used the lineage's commit, revision and dataset | 8/8 |
+| 8 | Artifact loads/predicts (`negative` 0.943575), returns this `model_version`, and has `labels`/`max_content_tokens` matching the manifest | 4/4 |
 
-**แต่ละ entry เก็บสำเนาผล evaluation ของตัวเองไว้ข้าง ๆ** เป็น `<run_id>-evaluation.json` แทนการชี้ไป `reports/P02-T05-evaluation-result.json` ที่ถูกเขียนทับทุกรอบ
+**Each entry keeps its own evaluation-result copy** beside it as `<run_id>-evaluation.json`, instead of pointing to `reports/P02-T05-evaluation-result.json`, which is overwritten on every run.
 
-**ข้อบกพร่องสองรอบที่พบและแก้แล้ว** — บันทึกไว้เพราะทั้งสองทำให้ entry อ้างสิ่งที่พิสูจน์ไม่ได้ ซึ่งตรงข้ามกับที่ R1 และ R2 ต้องการ:
+**Two bugs found and fixed:** both made entries claim something that could not be verified, against R1/R2:
 
-1. entry แรกบันทึกผลด้วย **path ที่ใช้ร่วมกัน** ซึ่งถูกเขียนทับทุกรอบ → version นั้น **trace ไม่ได้ทันทีที่รัน evaluation ซ้ำ** · แก้ด้วยการคัดลอกสำเนาไว้ข้าง entry พร้อม test ที่เขียนทับไฟล์กลางแล้วยืนยันว่า entry ยัง resolve ได้
-2. การแก้ครั้งนั้นตั้งชื่อสำเนาจาก `model_version` จึงต้อง**เขียน `result_file` ลง lineage หลังคำนวณ digest แล้ว** → entry ที่เก็บไว้ **คำนวณ version ของตัวเองกลับมาไม่ได้** · ตรวจไม่พบตอนแรกเพราะการตรวจของเราเทียบกับ `None` ซึ่งจริงเสมอ · แก้ด้วยการตั้งชื่อสำเนาจาก `run_id` ที่มีอยู่ก่อนการ hash พร้อม **test ที่คำนวณ version ใหม่จาก lineage ที่เก็บ** (ชั้นที่ 1 ข้างบนจึงมี test กันการถดถอยใน CI)
+1. The first entry pointed to a **shared result path** overwritten each run, so **rerunning evaluation immediately broke traceability**. Fixed by keeping a copy beside the entry, with a test that overwrites the shared file and checks that the entry still resolves.
+2. That fix named the copy from `model_version`, requiring **`result_file` to be added to lineage after hashing**. The saved entry then **could not reproduce its own version**. The first check missed this because it compared against `None`, which was always true. Fixed by naming the copy from the already-available `run_id`, plus a **test that recomputes the version from stored lineage**. Layer 1 above is now covered by a CI regression test.
 
-entry ที่สร้างด้วยโค้ดที่มีข้อบกพร่องถูกลบทั้งหมดเพราะกู้คืนไม่ได้และไม่เคย deploy ที่ไหน · git history เก็บบันทึกไว้ว่ามีอยู่
+All entries created by the faulty code were deleted because they could not be recovered and had never been deployed. Git history keeps their record.
 
-### จุดที่ lineage ไม่สอดคล้องกันเอง และเหตุผลที่ยอมรับได้
+### Lineage mismatch and why it was accepted
 
-`manifest.json` บันทึก `built_with.code_commit = 3b8e584` แต่ lineage ปัจจุบันบันทึก `code.commit = bbe375d` เพราะ artifact ถูก package ครั้งเดียวที่ `3b8e584` แล้วรัน evaluate/register ซ้ำอีกสองรอบ (`f1e7f0f` แล้ว `bbe375d`) โดยไม่ build artifact ใหม่ · ไฟล์ที่ตัดสินผลทำนาย 5 ไฟล์เปลี่ยนจริงระหว่างสอง commit นี้ — **แต่เปลี่ยนเฉพาะที่ commit `bbe375d` เดียว** (`3b8e584`→`f1e7f0f` ไม่แตะไฟล์เหล่านี้เลย) และเป็นการแก้ comment/docstring เท่านั้น ยืนยันด้วยการเทียบ AST ว่าทุก node เหมือนเดิมก่อน commit นั้น · hash ของไฟล์ในชุด artifact ยังตรงกับที่ lineage บันทึกทุกตัว (ชั้นที่ 2)
+`manifest.json` records `built_with.code_commit = 3b8e584`, while current lineage records `code.commit = bbe375d`. The artifact was packaged once at `3b8e584`, then evaluated/registered twice more (`f1e7f0f`, then `bbe375d`) without rebuilding. Five prediction-affecting files changed between these commits, **only in commit `bbe375d`** (`3b8e584`→`f1e7f0f` did not touch them). Changes were comments/docstrings only, confirmed by identical AST nodes before that commit. Every bundled-file hash still matches lineage (layer 2).
 
-**แต่ `package_artifact.py` และ `registry.py` ไม่อยู่ใน `BEHAVIOUR_PATHS`** จึงไม่มี guard ที่จะจับได้ถ้า packaging logic เปลี่ยนไปหลัง build · รอบนี้ยืนยันด้วยการตรวจ AST และ hash เอง ไม่ใช่ด้วย guard อัตโนมัติ
+**However, `package_artifact.py` and `registry.py` are outside `BEHAVIOUR_PATHS`**, so the guard would not catch packaging-logic changes after a build. This run was verified manually through AST/hash checks, not that automatic guard.
 
 ---
 
-## 6. เวลาเริ่มระบบและหน่วยความจำ
+## 6. Startup time and memory
 
-ไม่ใช่หลักฐาน R1 แต่เป็นผลวัดที่ [P01-T03 §5](../docs/plans/P01-T03-system-structure.md#5-เหตุผลและข้อแลกเปลี่ยน) สั่งให้วัดใน P02–P03 · **วัดสองรอบคนละวัน ได้เวลาต่างกันราวสองเท่าทุกค่า แต่ peak RSS ตรงกัน ยังหาสาเหตุไม่ได้ (ไม่ได้บันทึก CPU load ไว้) — ค่าเวลาในส่วนนี้ใช้เป็นเกณฑ์ตัดสินไม่ได้**
+These measurements are not R1 evidence, but were requested for P02–P03 in [P01-T03 §5](../docs/plans/P01-T03-system-structure.md#5-reasons-and-trade-offs). **Two sessions on different days gave roughly twofold timing differences, while peak RSS was consistent. The cause is unknown; CPU load was not recorded. Timing here is not an acceptance criterion.**
 
-**วิธีวัด** (หลายรอบ รอบละ process ใหม่, ด้วย `resource.getrusage().ru_maxrss` ที่ 3 จุด: หลัง import framework, หลังโหลด weights, หลังทำนาย 50 ครั้ง) มี **2 กับดักที่ทำให้ตัวเลขคลาดแบบมองไม่เห็น**:
+**Method:** multiple runs, each in a new process, using `resource.getrusage().ru_maxrss` at three points: after framework import, weights loading and 50 predictions. There are **two easy-to-miss measurement traps**:
 
-- **หน่วยของ `ru_maxrss` ต่างกันตาม platform** — bytes บน macOS, **kilobytes บน Linux** · ถ้าไม่แปลงหน่วย ตัวเลขจะคลาด **1024 เท่า** ในค่าที่ใช้ตั้ง memory limit และผลลัพธ์ยังดูเป็นตัวเลขปกติจนตรวจไม่เจอ
-- **ต้อง `import torch`/`transformers` ที่จุดเดียวกับที่ `inference.py` ทำ** (ข้างใน `load()`/`predict()` ไม่ใช่ระดับ module) — ถ้า import เร็วกว่านั้น เฟส "import framework" จะวัดได้ ~0.004 วินาทีซึ่งไม่จริง เวลานั้นไปปนอยู่ในเฟส "โหลด weights" แทน
+- **`ru_maxrss` units differ by platform:** bytes on macOS, **kilobytes on Linux**. Missing the conversion creates a **1024-fold error** in values used for memory limits, while still looking like an ordinary number.
+- **Run `import torch`/`transformers` where `inference.py` does**, inside `load()`/`predict()`, not at module level. Importing earlier makes the "import framework" phase appear to take ~0.004 seconds; the time is instead mixed into "load weights".
 
-### ผลที่ต้องรู้
+### Main results
 
-| | ค่าสูงสุดที่วัดได้ (ทั้งสองรอบ) |
+| | Highest measured value (both sessions) |
 |---|---:|
-| หลังโหลด weights | ~341 MiB |
-| หลังทำนายข้อความสั้นครั้งแรก | ~706 MiB |
-| **หลังทำนาย 50 ครั้ง · ข้อความที่เพดาน (510 tokens)** | **783.4 MiB** |
+| After loading weights | ~341 MiB |
+| After the first short prediction | ~706 MiB |
+| **After 50 predictions at the limit (510 tokens)** | **783.4 MiB** |
 
-**การทำนายครั้งแรกกินเพิ่มอีกราว 365 MiB** มากกว่าการอ่าน weights ทั้งก้อน — torch จอง workspace ของ forward pass ตอนนั้น · **ถ้า sizing จากตัวเลข "หลังโหลด" ~341 MiB container จะตายตอน request แรก** · **ใช้ 783 MiB เป็นตัวเลข sizing** ไม่ใช่ 341 MiB — ค่านี้วัดซ้ำได้ข้ามสองรอบ (748 เทียบ 783.4) ต่างจากตัวเลขเวลา · **ไม่พบสัญญาณว่ารั่ว** (ที่ 25 และ 50 ครั้งได้ค่าเดียวกัน)
+**The first prediction adds about 365 MiB**, more than loading the weights, because torch allocates forward-pass workspace then. **Sizing only from the ~341 MiB "loaded" value can kill the container on its first request. Use 783 MiB for sizing, not 341 MiB.** Memory was repeatable across the sessions (748 vs 783.4), unlike timing. **No leak signal was observed**: values at 25 and 50 predictions were the same.
 
-**เวลาต่อการทำนาย:** ข้อความที่เพดานช้ากว่าข้อความสั้น **3.6–4.2 เท่า** (สองรอบให้ค่าต่างกัน) — P03–P04 ต้องทดสอบเป้า p95 ด้วยข้อความยาวด้วย ไม่ใช่แค่สั้น
+**Per-prediction time:** limit-length inputs were **3.6–4.2 times** slower than short inputs, depending on the session. P03–P04 need long inputs in p95 testing, not only short ones.
 
-**เวลาเริ่มระบบ** วัดได้ 1.36–2.95 วินาทีขึ้นกับรอบที่วัด (ต่างกันราวสองเท่าระหว่างสองรอบ) — **ไม่ใช้เป็นเกณฑ์** P03–P04 ต้องวัดเองในคอนเทนเนอร์
+**Startup time:** 1.36–2.95 seconds depending on the session, roughly a twofold difference. **Not an acceptance criterion**; P03–P04 must measure it in the container.
 
-**safetensors เทียบ `pytorch_model.bin`:** ไม่ต่างกันทั้งเวลาและ RAM (รายละเอียดอยู่ในส่วนที่ 3)
+**Safetensors vs `pytorch_model.bin`:** no measured time/RAM difference; details in section 3.
 
-**ประสิทธิภาพของ evaluation:** 351–679 วินาทีสำหรับ 14,640 แถว แบบทำนายทีละข้อความ — **ไม่ใช่ latency ของ API** การวัดเป้า p95 เป็นงาน P03–P04
+**Evaluation runtime:** 351–679 seconds for 14,640 rows, one input at a time. **This is not API latency.** The p95 target is P03–P04 work.
 
 ---
 
-## 7. ที่เก็บ model artifact
+## 7. Model-artifact storage
 
-**ตัดสิน: ใส่ชุด artifact เข้าไปใน container image ตอน build** ไม่ใช้ blob storage แยก · ผู้ตัดสิน: คนที่ 1 ตามอำนาจที่ได้รับเมื่อ 2026-10-07
+**Decision: put the artifact bundle in the container image at build time**, not separate blob storage. Decided by Person 1 under the authority given on 2026-10-07.
 
-### ตัดสินจากเกณฑ์ที่ยืนยันได้เท่านั้น
+### Use only supported decision criteria
 
-| เกณฑ์ | ยืนยันได้จาก | ประเภทหลักฐาน |
+| Criterion | Basis | Evidence type |
 |---|---|---|
-| ขนาด artifact 477 MiB | ส่วนที่ 3 | **ผลวัด** |
-| เวลาเริ่มระบบ 1.42–2.93 s เมื่อไฟล์อยู่ในเครื่องแล้ว | ส่วนที่ 6 | **ผลวัด** (สองรอบต่างกันราวสองเท่า) |
-| ทางเลือกนั้นมีขั้นดาวน์โหลดตอน start หรือไม่ | คุณสมบัติของการออกแบบ | **เชิงโครงสร้าง** |
-| rollback ต้องย้อนกี่สิ่ง | คุณสมบัติของการออกแบบ | **เชิงโครงสร้าง** |
-| งบรองรับทางเลือกไหน | [Proposal §6](../PROPOSAL.md#6-cost-estimate) ระบุสมมติฐานไว้แล้วว่า "one Basic container registry, 5 GB of blob storage" | **ข้ออ้างจากเอกสาร** |
+| Artifact size: 477 MiB | Section 3 | **Measured** |
+| Startup: 1.42–2.93 s with local files | Section 6 | **Measured**, with roughly twofold variation between sessions |
+| Whether startup includes a download step | Design behavior | **Structural** |
+| How many items rollback must revert | Design behavior | **Structural** |
+| Which option fits the budget | [Proposal §6](../PROPOSAL.md#6-cost-estimate) already assumes "one Basic container registry, 5 GB of blob storage" | **Document assumption** |
 
-**สิ่งที่ตั้งใจไม่ใช้เป็นเกณฑ์: เวลาดาวน์โหลด 477 MiB จากบริการจริง** เพราะวัดในเครื่องไม่ได้ และการเดาค่าจะขัดกับ [P01-T03 §10](../docs/plans/P01-T03-system-structure.md#10-จุดตรวจที่ต้องไม่หลุดระหว่างทำงาน) ที่สั่งว่า "ไม่เดาตัวเลขล่วงหน้า"
+**Deliberately excluded: download time for 477 MiB from the real service.** It could not be measured locally, and guessing would conflict with [P01-T03 §10](../docs/plans/P01-T03-system-structure.md#10-checks-to-keep-in-view), which says not to invent measurements.
 
-### เทียบสองทางเลือก
+### Compare two options
 
-**A** = `COPY` artifact เข้า image ตอน build แล้ว push ไป container registry · **B** = เก็บใน Blob Storage แล้วดึง 477 MiB ทุกครั้งที่ container เริ่ม
+**A** = `COPY` the artifact into the image at build time, then push to a container registry. **B** = store it in Blob Storage and download 477 MiB whenever the container starts.
 
-| เกณฑ์ | A — ใส่ใน image (ที่เลือก) | B — ดาวน์โหลดตอน start |
+| Criterion | A — inside the image (chosen) | B — download at startup |
 |---|---|---|
-| **bytes เดินทางเมื่อไร** | ไปกับ image ตอน pull | pull image **แล้วยัง**ต้องดึง artifact อีกต่อหนึ่ง |
-| **ผลต่อ cold start** | artifact อยู่ใน image แล้ว เริ่มได้เลย · ขนาด image โตขึ้น 477 MiB | **ทุกครั้งที่เริ่ม**ต้องดึง 477 MiB เพิ่มจากการ pull image · [Proposal §3](../PROPOSAL.md#3-serving-pattern-and-requirements) ระบุว่า service **scale to zero เมื่อ idle** จึงเกิด cold start บ่อย |
-| **rollback (R2)** | **ย้อนสิ่งเดียว** — image revision พา code + artifact ไปพร้อมกัน | **ย้อนสองสิ่ง** — image revision กับ pointer ที่ชี้ blob · ทั้งสองคลาดกันได้ |
-| **งบ (Proposal §6)** | registry ที่สมมติไว้แล้วรองรับ · ไม่เพิ่ม egress นอกจากการ pull image | blob 5 GB ที่สมมติไว้แล้วรองรับ · **แต่เพิ่ม egress ทุก cold start** ซึ่งกินเข้า $3.55 ที่สำรองไว้สำหรับ "requests, network, operations" |
-| **failure demo (R4)** | ต้องแก้ไฟล์ในคอนเทนเนอร์ที่รันอยู่ หรือ deploy image ที่พังตั้งใจ | **ง่ายกว่า** — ลบหรือเปลี่ยนชื่อ blob แล้ว readiness ต้อง fail |
-| **เปลี่ยน model** | ต้อง build + deploy ใหม่ | เปลี่ยน config ชี้ blob ใหม่ |
+| **When bytes move** | With the image pull | Image pull **plus** a separate artifact download |
+| **Cold start** | Artifact is already in the image; image grows by 477 MiB | **Every startup** adds a 477 MiB download after pulling the image. [Proposal §3](../PROPOSAL.md#3-serving-pattern-and-requirements) says the service **scales to zero when idle**, so cold starts may be frequent |
+| **Rollback (R2)** | **Revert one item**: image revision carries code + artifact together | **Revert two items**: image revision and blob pointer, which can get out of sync |
+| **Budget (Proposal §6)** | Fits the assumed registry; no extra egress beyond image pulls | Fits the assumed 5 GB blob storage, but **adds egress on every cold start**, using the $3.55 reserved for "requests, network, operations" |
+| **Failure demo (R4)** | Modify a file in the running container or deploy an intentionally broken image | **Easier**: delete/rename the blob and readiness should fail |
+| **Change the model** | Rebuild + redeploy | Point configuration to a new blob |
 
-### เหตุผลที่เลือก A
+### Why option A was chosen
 
-**รักษาการผูกที่ `model_version` อ้างไว้ให้เป็นจริง (เหตุผลหลัก)** — digest ครอบ code commit + environment + artifact พร้อมกัน เพราะ `predict()` ขึ้นกับโค้ดของเราไม่ใช่แค่ weights · ถ้า artifact อยู่ใน blob ที่สลับได้ตอน runtime **`model_version` จะอ้างการผูกที่ไม่มีอะไรบังคับ** — คนเปลี่ยน blob แล้ว API ยังคืน version เดิมได้ · เหตุผลรองและข้อแลกเปลี่ยนอื่นอยู่ในตารางเทียบ A/B ด้านบนแล้ว · **failure demo ของคนที่ 3 ต้องเปลี่ยนวิธี** จากลบ blob เป็นแก้หรือลบไฟล์ใน `model/` ของคอนเทนเนอร์ที่รันอยู่ หรือ deploy image ที่ตั้งใจใส่ artifact ที่พัง
+**Keep the binding claimed by `model_version` real — the main reason.** The digest covers code commit + environment + artifact, because `predict()` depends on our code as well as weights. A runtime-swappable blob would let `model_version` claim a binding that nothing enforces: someone could change the blob while the API still returns the old version. Other reasons/trade-offs are in the comparison above. **Person 3's failure demo needs a different method:** modify/delete a file in the running container's `model/`, or deploy an image with an intentionally broken artifact, rather than deleting a blob.
 
-ทางเลือกที่เลือกรองรับชุด artifact จริง — ยืนยันแล้วในส่วนที่ 3: `COPY` เข้า image ได้ (ไฟล์ธรรมดา ไม่มี symlink), loader ไม่ต้องต่อ network (ทดสอบ offline แล้ว), core ไม่มีโค้ดติดต่อ cloud, ขนาด 477 MiB พอดีกับ Basic container registry ที่ Proposal §6 สมมติไว้
+The chosen option supports the real artifact, as checked in section 3: ordinary files with no symlinks can be copied into the image; offline loading works; core code has no cloud calls; and 477 MiB fits the Basic container registry assumed in Proposal §6.
 
-### สูตรแทนค่าให้ P04 — ไม่ใช่ตัวเลขที่เดา
+### Formula for P04 — not a guessed measurement
 
-เวลา cold start ที่เพิ่มจาก artifact = **477 MiB ÷ throughput ที่วัดได้**
+Extra artifact cold-start time = **477 MiB ÷ measured throughput**.
 
-เป็น**เลขคณิตจากขนาดที่วัดแล้ว** ไม่ใช่การอ้าง throughput ของ Azure ที่เราไม่ได้วัด · **P04 วัด throughput จริงแล้วแทนค่าเอง**
+This is **arithmetic from the measured size**, not a claim about unmeasured Azure throughput. **P04 should measure throughput and substitute it.**
 
-สิ่งที่วัดในเครื่องได้คือ อ่านไฟล์ 477 MiB จาก page cache ที่อุ่นแล้วใช้ **0.10–0.15 วินาที** · ใช้ได้อย่างเดียวคือเป็น **ขอบล่างสุด** — การขนผ่าน network เร็วกว่าการอ่านจากเครื่องตัวเองไม่ได้ · แปลว่าเวลาที่เพิ่มขึ้นมาจาก network แทบทั้งหมด **ไม่ใช่การประมาณเวลาดาวน์โหลด**
-
----
-
-## 8. ข้อจำกัดที่ติดไปกับผลงาน
-
-**ผลวัดทั้งหมดมาจาก macOS 15.5 arm64 ไม่ใช่ในคอนเทนเนอร์และไม่ใช่บน Azure** — ข้อจำกัดที่ใหญ่ที่สุด:
-
-- `safetensors` ใช้ **mmap** ทำให้ peak RSS หลังโหลด (341 MiB) **ต่ำกว่าขนาดไฟล์ (476 MiB)** เพราะหน้าที่ยังไม่ถูกแตะไม่ถูกนับ · **บน Linux หน้าที่ mmap มาอาจถูกนับเข้า cgroup limit** ซึ่งจะทำให้ตัวเลขจริงใน container สูงกว่านี้ · **ยังไม่ได้ทดสอบ**
-- สถาปัตยกรรม CPU ต่างกัน (arm64 เทียบ x86-64 ที่ Azure มักให้) ทำให้เวลาทำนายเทียบตรงไม่ได้
-- ไม่มี container memory limit มาบีบ จึงยังไม่รู้ว่าถ้าจำกัดที่ค่าใดจะถูก OOM kill
-- **ตัวเลขทุกตัวต้องวัดซ้ำก่อนใช้ตัดสินขนาด container**
-
-**ตัวเลขเวลาวัดซ้ำไม่ได้ข้ามรอบการวัด** — สองรอบคนละวันบนเครื่องเดียวกันให้เวลาต่างกันราวสองเท่าทุกค่า ขณะที่ peak RSS ตรงกัน · **ยังหาสาเหตุไม่ได้** (รายละเอียดและเบาะแสอยู่ใน ส่วนที่ 6) · **ค่าเวลาทุกค่าใช้เป็นเกณฑ์ผ่าน/ไม่ผ่านไม่ได้** และใช้ประมาณ cold start ไม่ได้ · การเทียบสองทางเลือกต้องวัดทั้งสองค่าในรอบเดียวกันเสมอ
-
-**tolerance ใช้ได้เฉพาะ platform ที่วัด** — ถ้า CI รันบน Linux x86-64 **อย่าใช้เกณฑ์ "ตรงทุก bit" เป็น gate ทันที** · เหตุผลและทางเลือกที่แนะนำอยู่ใน ส่วนที่ 2 ท้ายหัวข้อ tolerance
-
-**fresh state ยังไม่สุด** — ลบ `.venv`, HF cache และ `artifacts/` แล้วสร้างใหม่ทั้งหมด แต่ **ยังใช้ Python interpreter ตัวเดิม** (`3.13.11` จาก Anaconda) และ `data/Tweets.csv` ไฟล์เดิม · dataset มี `verify()` ตรวจ sha256 ทุกรอบอยู่แล้ว ส่วน interpreter ยังไม่ได้ทดสอบว่าเปลี่ยน patch version แล้วผลเปลี่ยนไหม — pin ถึงระดับ minor เท่านั้น
-
-**evaluation ประเมิน HF snapshot ไม่ใช่ชุด artifact ที่จะ deploy** — `evaluate.py` ใช้ไฟล์จาก HF cache · ผลใช้กับ artifact ได้ **ผ่านความเท่ากันของ logits บน 300 แถว ไม่ใช่เพราะเป็นไฟล์เดียวกัน** (ส่วนที่ 3) · **ข้อเสนอที่ยังไม่ได้ทำ:** ให้ `evaluate.py` ประเมินจากชุด artifact โดยตรงจะปิดช่องนี้ แต่จะทำให้ evaluation ขึ้นกับ packaging ซึ่งกลับลำดับ dependency
-
-**metric ที่วัดได้คือความตรงกับ label ชุดนี้ ไม่ใช่เพดานความสามารถของ model** — `airline_sentiment_confidence` ต่ำสุด 0.335 · **4,195 แถว (28.7%) ต่ำกว่า 1.0** และ **3,872 แถว (26.4%) ต่ำกว่า 0.7** · label มาจาก crowdsourcing ที่ผู้ตัดสินไม่เห็นตรงกันทุกแถว ความผิดพลาดบางส่วนในตารางจึงอาจมาจาก label ไม่ใช่จาก model · เลือกไม่กรองเพื่อไม่ให้ตัวเลขดูดีขึ้นด้วยดุลพินิจของเรา
-
-**ผลอธิบายประสิทธิภาพบน airline feedback เท่านั้น** ตามที่ Proposal §2 ระบุเอง · ข้อความในชุดนี้เป็นทวีตสั้นเกี่ยวกับสายการบิน ยาวสุด 186 อักขระ จึง **ไม่แตะเพดาน 510 tokens เลย** — การทดสอบ boundary case ต้องใช้ข้อความที่สร้างขึ้นเอง และ P03 ทดสอบ boundary ของ API จาก dataset นี้ไม่ได้
-
-**ไม่ได้ทดสอบว่า tolerance นี้จับความผิดปกติได้จริง** — ยังไม่ได้ลองทำให้ผลเปลี่ยนโดยเจตนา (เช่น เปลี่ยนเวอร์ชัน `torch`) เพื่อดูว่าเกณฑ์จับได้ · การทดลองแบบนั้นใกล้เคียงงาน regression test ใน P05 มากกว่า
-
-**ไม่ได้วัดภายใต้ concurrency** — วัดทีละ request ใน process เดียว · เป้า p95 ที่ 2 concurrent requests เป็นงาน P03–P04
-
-**ยังไม่มีสคริปต์ไล่ย้อน lineage ใน repo** — การไล่ย้อน 36/36 ในส่วนที่ 5 ใช้สคริปต์ชั่วคราวที่ไม่ได้เก็บไว้ · ชั้นที่ 1 มี test กันการถดถอยใน `tests/test_registry.py` แล้ว ส่วนชั้นอื่นยังไม่มี · ถ้า P04 ต้องการ gate ใน CI ต้องเขียนขึ้น โดยใช้ตารางในส่วนที่ 5 เป็นรายการตรวจ
-
-**ยังไม่มีขั้นตอน release หลาย version** — `registry.main()` ลงทะเบียน artifact ชุดเดียวที่มีอยู่ และปฏิเสธถ้าเจอมากกว่าหนึ่งชุดแทนที่จะเดาว่าอันไหน · การจัดการหลาย version พร้อมกันจะจำเป็นตอน rollback ใน **P04** ซึ่งยังไม่ได้ออกแบบ · มี `ponytail:` marker กำกับไว้
-
-**registry เป็นไฟล์ใน Git ไม่ใช่บริการ** — เลือกแบบนี้เพราะไฟล์ใน Git ก็ตรวจย้อนได้ตามที่ R1 ต้องการ · ถ้าภายหลังเลือกบริการที่มี registry ของตัวเอง entry พวกนี้ยังใช้เป็นบันทึกอ้างอิงได้ **ยังไม่ได้ประเมินว่าจะย้ายหรือทำสองที่**
-
-**ตัดสินที่เก็บ artifact โดยไม่ได้ทดลองกับ Azure เลย** — ไม่มี `az` CLI และไม่มี credential ในเครื่อง การสร้าง resource อยู่ใน P04 · การตัดสินวางบนคุณสมบัติเชิงโครงสร้างและสมมติฐานงบที่ Proposal เขียนไว้เอง **ไม่ใช่ผลทดลองบน cloud**
-
-**ยังไม่รู้ว่า Azure Container Apps cache image layer ระหว่าง cold start อย่างไร** — ถ้า cache ดีมากข้อดีของทางเลือก A จะยิ่งชัด ถ้าไม่ cache เลยทั้งสองทางเลือกจะใกล้กันขึ้น · **P04 ต้องตรวจ** และถ้าสมมติฐานนี้ผิดอย่างมีนัยสำคัญ ให้กลับมาทบทวน · **ไม่ได้เทียบทางเลือกที่สาม** (Azure ML model registry, volume mount) เพราะเพิ่มบริการที่ Proposal §6 ไม่ได้สมมติไว้ในงบ
-
-**ข้อจำกัดด้าน licence ของ dataset** — CC BY-NC-SA 4.0 เป็น non-commercial + ShareAlike · ใช้ประเมินในงานเรียนได้และต้องให้เครดิต · ยังไม่ได้ประเมินว่าการเผยแพร่ตัวอย่างข้อความจาก dataset ติดเงื่อนไข ShareAlike แค่ไหน จึง **ไม่ยกข้อความจริงจาก dataset ลง `reports/` แม้แต่แถวเดียว** · ไฟล์ผลเก็บเฉพาะตัวเลขนับและ metadata ของรุ่น ไม่มี token
-
-**ผลทั้งหมดผูกกับ revision `3216a57f…` และ dataset version 4** — ถ้าเปลี่ยนอย่างใดอย่างหนึ่ง ต้องรันใหม่ทั้งหมดเพราะ `max_position_embeddings`, tokenizer, label mapping และ metric อาจต่างไป
+Locally, reading 477 MiB from a warm page cache took **0.10–0.15 seconds**. It was used only as a **lower bound**, based on local reads being faster than network transfer. Most extra time would therefore come from the network. **This is not a download-time estimate.**
 
 ---
 
-## 9. ส่วนเชื่อม model เข้า API — ยืนยันได้เท่าที่ฝั่ง module มี
+## 8. Limitations carried with the work
 
-[Overview](../overview-plan.md) มอบให้คนที่ 1 ทั้ง "ดูแล P02" และ "ส่วนเชื่อม model เข้า API" · **ฝั่ง module ยืนยันแล้ว ฝั่ง endpoint ยังไม่มีเพราะเป็นงาน P03**
+**All measurements came from macOS 15.5 arm64, not a container or Azure.** Main limitations:
 
-### Interface ที่ส่งมอบ
+- `safetensors` uses **mmap**, so loaded peak RSS (341 MiB) is **below file size (476 MiB)** because untouched pages are not counted. **Linux may count mapped pages toward the cgroup limit**, making real container usage higher. **Not yet tested.**
+- CPU architecture differs: arm64 vs the x86-64 commonly used on Azure, so inference timings are not directly comparable.
+- No container memory limit was imposed, so the OOM-kill threshold is unknown.
+- **Remeasure these values before choosing container size.**
+
+**Timings were not repeatable between measurement sessions.** Two days on the same machine gave roughly twofold differences across timings, while peak RSS was consistent. **Cause unknown**; see section 6. **Timing values cannot be pass/fail criteria or cold-start estimates.** Compare alternatives within the same measurement session.
+
+**Tolerance applies only to the measured platform.** If CI runs on Linux x86-64, **do not immediately use exact bit equality as a gate**. See the reasoning at the end of section 2's tolerance discussion.
+
+**Fresh state still had limits:** `.venv`, HF cache and `artifacts/` were rebuilt, but **the Python interpreter stayed the same** (`3.13.11` from Anaconda), as did `data/Tweets.csv`. Dataset `verify()` checks SHA-256 every run. Different Python patch versions were not tested; Python is pinned only to the minor version.
+
+**Evaluation uses the HF snapshot, not the deployable artifact.** `evaluate.py` reads HF-cache files. Results apply to the artifact **through equal logits on 300 rows, not because the files are identical** (section 3). **Unimplemented proposal:** evaluate the artifact directly to close this gap, but that would make evaluation depend on packaging, reversing the dependency order.
+
+**Metrics measure agreement with this dataset's labels, not the model's maximum capability.** Minimum `airline_sentiment_confidence` is 0.335; **4,195 rows (28.7%) are below 1.0**, and **3,872 (26.4%) below 0.7**. Crowdsourced annotators did not agree on every row, so some errors may come from labels rather than the model. No filtering was applied to avoid improving scores through an arbitrary cutoff.
+
+**Results describe airline feedback only**, as Proposal §2 says. These are short airline tweets, at most 186 characters, so they **never reach the 510-token limit**. Boundary tests need constructed text; P03 cannot test the API boundary using this dataset alone.
+
+**The tolerance has not been deliberately challenged**, for example by changing `torch` to see whether it detects a difference. That experiment is closer to P05 regression work.
+
+**No concurrency measurement:** one request at a time in one process. The p95 target at 2 concurrent requests belongs to P03–P04.
+
+**No lineage trace-back script is stored in the repo.** The 36/36 checks in section 5 used a temporary script that was not kept. Layer 1 has a regression test in `tests/test_registry.py`; the others do not. If P04 needs a CI gate, it must implement one using section 5's checklist.
+
+**No multi-version release process yet.** `registry.main()` registers the only artifact present and rejects multiple bundles instead of guessing. Multi-version handling is needed for **P04** rollback but was not designed yet; a `ponytail:` marker records this.
+
+**The registry is files in Git, not a service.** This was chosen because Git files provide the traceability R1 needs. If a service with its own registry is selected later, these entries remain reference records. **Migration vs maintaining both has not been assessed.**
+
+**Artifact storage was chosen without Azure experiments.** The machine had no `az` CLI or credentials; resource creation belongs to P04. The decision used design properties and Proposal budget assumptions, **not cloud measurements**.
+
+**Azure Container Apps image-layer caching during cold starts is unknown.** Strong caching would favor A more; no caching would bring the options closer. **P04 must check** and revisit if this assumption is materially wrong. **No third option** (Azure ML model registry, volume mount) was compared because it adds services outside Proposal §6's budget assumptions.
+
+**Dataset licence limit:** CC BY-NC-SA 4.0 is non-commercial + ShareAlike. It can be used for coursework evaluation with attribution. ShareAlike implications for publishing sample texts were not assessed, so **not a single real dataset text is copied into `reports/`**. Results contain only counts/version metadata, no tokens.
+
+**All results are tied to revision `3216a57f…` and dataset version 4.** Changing either requires rerunning checks because `max_position_embeddings`, tokenizer, label mapping and metrics may change.
+
+---
+
+## 9. Model-to-API interface — module-side verification only
+
+The [Overview](../overview-plan.md) assigns Person 1 both P02 and the model-to-API interface. **The module side is verified; endpoints did not yet exist because they belong to P03.**
+
+### Delivered interface
 
 ```python
 from feedbackpulse.inference import (
@@ -502,51 +502,51 @@ from feedbackpulse.inference import (
 )
 from feedbackpulse.model_files import ensure_model_files
 
-clf = SentimentClassifier.load(ensure_model_files(), model_version="<อ่านจาก registry entry>")  # ครั้งเดียวตอน process เริ่ม
-result = clf.predict("My flight was delayed and nobody helped me.")   # ต่อ request
+clf = SentimentClassifier.load(ensure_model_files(), model_version="<read from registry entry>")  # once at process startup
+result = clf.predict("My flight was delayed and nobody helped me.")   # per request
 # -> Prediction(sentiment='negative', score=0.943575, model_version='sentiment-6e7ff9fbc17c-0110c462')
 ```
 
-| ตรวจ | ผล |
+| Check | Result |
 |---|---|
-| `Prediction` มี 3 fields ตรงกับ [P01-T02 §3](../docs/plans/P01-T02-api-contract.md#3-request-และ-response) | `sentiment: str`, `score: float`, `model_version: str` — ไม่มีเกิน |
-| exception map ครบ 3 สถานะที่ [P01-T02 §4](../docs/plans/P01-T02-api-contract.md#4-validation-และ-error-handling) กำหนด | `ModelNotReady` ← `RuntimeError` → `503` · `TextTooLong` ⊂ `InvalidText` ← `ValueError` → `422` |
-| โหลดครั้งเดียวตอน `load()` ตาม [P01-T03 §3](../docs/plans/P01-T03-system-structure.md#3-ส่วนให้บริการ--รับ-feedback-แล้วทำนาย) | `predict()` ไม่มี `from_pretrained` · `__init__` รับ model ที่โหลดแล้ว |
-| core ไม่อ่าน env ไม่ต่อ network ไม่เรียก cloud | `inference.py` ไม่มี `os.environ`, `getenv`, `requests`, `azure`, `boto` |
-| **มี tokenize และ predict ชุดเดียวใน `src/`** | `AutoTokenizer`, `softmax`, `argmax` พบเฉพาะใน `inference.py` |
-| `ruff check` · `ruff format --check` · `pytest` | ผ่านทั้งหมด · **35 tests** |
+| `Prediction` has the 3 fields in [P01-T02 §3](../docs/plans/P01-T02-api-contract.md#3-request-and-response) | `sentiment: str`, `score: float`, `model_version: str` — no extra fields |
+| Exception mapping covers the 3 statuses in [P01-T02 §4](../docs/plans/P01-T02-api-contract.md#4-validation-and-error-handling) | `ModelNotReady` ← `RuntimeError` → `503` · `TextTooLong` ⊂ `InvalidText` ← `ValueError` → `422` |
+| Load once in `load()`, per [P01-T03 §3](../docs/plans/P01-T03-system-structure.md#3-serving--receive-feedback-and-predict) | No `from_pretrained` in `predict()`; `__init__` receives an already-loaded model |
+| Core does not read env, call the network or use cloud services | No `os.environ`, `getenv`, `requests`, `azure`, `boto` in `inference.py` |
+| **One tokenization/prediction implementation in `src/`** | `AutoTokenizer`, `softmax`, `argmax` appear only in `inference.py` |
+| `ruff check` · `ruff format --check` · `pytest` | All pass; **35 tests** |
 
-**`package_artifact.py` เรียก `from_pretrained` ด้วย** — เพื่อ **แปลง weights เป็น safetensors เท่านั้น** (`save_model` + `state_dict`) ไม่มี tokenizer ไม่มี softmax/argmax ไม่ทำนาย · มันยังโหลดชุดที่ build เสร็จผ่าน `SentimentClassifier.load()` เพื่ออ่าน `labels` และ `max_content_tokens` จึงไม่มี path ทำนายที่สอง
+**`package_artifact.py` also calls `from_pretrained`**, but only to **convert weights to safetensors** (`save_model` + `state_dict`). No tokenizer, softmax/argmax or prediction. It then loads the built bundle through `SentimentClassifier.load()` to read `labels`/`max_content_tokens`, so this is not a second inference path.
 
-**`TextTooLong` สืบทอดจาก `InvalidText`** จึงจับ `InvalidText` ตัวเดียวแล้วตอบ `422` ได้ทั้งสองกรณี · `TextTooLong` มี `.token_count` และ `.limit` ให้ใส่ในข้อความ error
+**`TextTooLong` inherits from `InvalidText`**, so catching `InvalidText` can return `422` for both. `TextTooLong` provides `.token_count` and `.limit` for the error message.
 
-### พฤติกรรมที่มี test กันการถดถอย
+### Behavior covered by regression tests
 
-| พฤติกรรม | test |
+| Behavior | Test |
 |---|---|
-| **เพดานตรวจก่อนเรียก model** — 511 tokens ถูกปฏิเสธด้วย `TextTooLong` ไม่ถึง forward pass ที่จะโยน `RuntimeError` และกลายเป็น `500` | `test_text_one_token_over_the_limit_is_rejected_not_truncated` |
-| **ไม่ตัดข้อความ** ตามที่ P01-T02 §3 ห้าม | test เดียวกัน (ได้ exception ไม่ได้ผลทำนายจากข้อความที่ถูกตัด) |
-| ชื่อกลุ่มอ่านจาก config ไม่ hardcode ลำดับ index | `test_labels_come_from_the_model_config` |
-| เพดานตรงกับค่าที่วัดได้ (510) | `test_token_limit_matches_the_recorded_value` |
-| tokenizer ไม่รายงานค่า sentinel | `test_tokenizer_reports_a_usable_limit_rather_than_the_sentinel` |
-| `model_version` คืนค่าที่ส่งเข้ามา ไม่ได้ตั้งเอง | `test_prediction_matches_the_api_contract` |
-| โหลดไม่สำเร็จได้ error ที่แยกแยะได้ | `test_load_failure_is_distinguishable` |
-| **version ที่คำนวณใหม่จาก lineage ที่เก็บ ตรงกับชื่อ entry** | `tests/test_registry.py` |
-| fingerprint จับผลทำนายที่ต่างกันแต่ confusion matrix เท่ากัน | `tests/test_evaluation.py` |
+| **Check length before calling the model**: 511 tokens raise `TextTooLong`, never reaching a forward pass that could raise `RuntimeError` and become `500` | `test_text_one_token_over_the_limit_is_rejected_not_truncated` |
+| **No truncation**, as required by P01-T02 §3 | Same test: exception, not prediction from shortened text |
+| Read labels from config, not hardcoded index order | `test_labels_come_from_the_model_config` |
+| Limit matches the measured value (510) | `test_token_limit_matches_the_recorded_value` |
+| Tokenizer does not report the sentinel | `test_tokenizer_reports_a_usable_limit_rather_than_the_sentinel` |
+| Return the supplied `model_version`, not a self-generated value | `test_prediction_matches_the_api_contract` |
+| Distinguishable model-load error | `test_load_failure_is_distinguishable` |
+| **Version recomputed from stored lineage matches the entry name** | `tests/test_registry.py` |
+| Fingerprint catches different predictions with the same confusion matrix | `tests/test_evaluation.py` |
 
-### ยืนยันด้วยการตรวจครั้งเดียว — ไม่มี test กันการถดถอย
+### One-time checks without regression tests
 
-| พฤติกรรม | หลักฐาน | ช่องว่าง |
+| Behavior | Evidence | Gap |
 |---|---|---|
-| **โหลดครั้งเดียว** weights อยู่ใน instance ไม่โหลดใหม่ต่อ `predict()` | จริงโดยโครงสร้าง — `predict()` ไม่เรียก `from_pretrained` | ไม่มี test ที่ assert ว่า `predict()` ไม่โหลดซ้ำ ถ้ามีใครย้ายการโหลดเข้าไปใน `predict()` จะไม่มีอะไรจับได้ |
-| **core ไม่อ่าน env ไม่ต่อ network** · **มี tokenize ชุดเดียว** | `grep` ใน `src/` | เป็นการตรวจ ณ เวลานั้น **ไม่กันคนเพิ่มภายหลัง** · ถ้าต้องการบังคับจริงต้องมี test หรือ lint rule ที่สแกน `src/` ซึ่งยังไม่มี |
+| **Load once**: weights stay in the instance, not reloaded for each `predict()` | True by structure: `predict()` does not call `from_pretrained` | No assertion prevents a future change from loading inside `predict()` |
+| **Core does not read env/use the network; one tokenization path** | `grep` in `src/` | A point-in-time check, **not protection against future additions**. Enforcing this needs a test/lint rule scanning `src/`, not yet present |
 
-### ยังยืนยันไม่ได้ และเป็นของใคร
+### Unverified items and ownership
 
-**"evaluation path กับ API path เรียกฟังก์ชันเดียวกัน" ยืนยันได้ครึ่งเดียว** — ฝั่ง evaluation ยืนยันแล้ว: `evaluate.py` เรียก `SentimentClassifier.predict()` ทีละข้อความ ไม่ได้ tokenize เอง · **ฝั่ง API ยืนยันไม่ได้เพราะยังไม่มี endpoint** → **P03 ต้องตรวจซ้ำ**
+**Only half of "evaluation and API call the same function" was verified.** Evaluation does: `evaluate.py` calls `SentimentClassifier.predict()` per input without its own tokenization. **The API had no endpoint yet**, so **P03 must check that side**.
 
-**`make portability-audit` ไม่ใช่จุดตรวจของ P02** — [P01-T03 §10](../docs/plans/P01-T03-system-structure.md#10-จุดตรวจที่ต้องไม่หลุดระหว่างทำงาน) ให้ตรวจการแยก core, configuration และ **cloud adapter** โดยมีเงื่อนไขว่า "เมื่อพัฒนาส่วนที่เกี่ยวข้องแล้ว" · **P02 ไม่มี cloud adapter** จึงเป็นจุดตรวจของ **P03–P04** · ส่วนที่ P02 รับผิดชอบคือแยก core (`inference.py`) ออกจาก configuration (`model_files.py`) ซึ่งตรวจแล้วข้างบน
+**`make portability-audit` is not a P02 gate.** [P01-T03 §10](../docs/plans/P01-T03-system-structure.md#10-checks-to-keep-in-view) asks for core/configuration/**cloud-adapter** separation once those parts exist. **P02 has no cloud adapter**, so that gate belongs to **P03–P04**. P02 owns core (`inference.py`) vs configuration (`model_files.py`) separation, checked above.
 
-**ยังไม่มีการตรวจว่า version ที่ deploy ตรงกับ artifact ที่โหลดจริง** — `load()` รับ `model_version` ที่ส่งมาเฉย ๆ ถ้า P03 ส่งค่าผิด API จะคืนค่าผิดโดยไม่มีอะไรจับได้
+**No check yet that the deployed version matches the loaded artifact.** `load()` simply accepts a supplied `model_version`; a wrong value from P03 would be returned by the API without detection.
 
-registry entry และ `manifest.json` มี hash ของทุกไฟล์ให้ตรวจได้ แต่ **การเรียกตรวจตอน startup เป็นของ P03** ตาม P01-T02 §4 และการตัดสินว่าอะไรนับเป็น "artifact ใช้งานไม่ได้" เป็นของ **P05** · P02 ไม่เขียนฟังก์ชันตรวจไว้ล่วงหน้าเพราะยังไม่มีผู้ใช้ และจะต้องเดา call site กับ error semantics ของเขา
+The registry entry and `manifest.json` provide every file hash, but **calling verification at startup belongs to P03**, per P01-T02 §4. Defining what makes an artifact "unusable" belongs to **P05**. P02 did not prebuild that function without a caller, since its call site/error semantics would have been guesses.

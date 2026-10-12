@@ -1,101 +1,111 @@
 # FeedbackPulse — Automation & Verification Scripts
 
-โฟลเดอร์นี้รวบรวม Script สำหรับการตรวจสอบคุณภาพ (Smoke Test) และการทดสอบกระบวนการปล่อยและกู้คืนเวอร์ชัน (Rollback Verification) บน **Azure Container Apps** ตามเกณฑ์ **R2 (Deployment & CI/CD)** ของวิชา ITCS355
+This folder contains smoke-test and rollback-verification scripts for **Azure Container Apps**, supporting **R2 (Deployment & CI/CD)** in ITCS355.
+
+**Before running commands:** the revision names and recorded examples below are
+from the team's East Asia deployment, not the later Malaysia West deployment.
+Some scripts still have the old target defaults. Check the subscription, resource
+group, App, endpoint, revision and matching token before use; do not assume that
+every command selects the latest deployment automatically.
+
+**Rollback changes live traffic, including with `SIMULATE=1`.** It is not an
+offline simulation. For the current presentation, use the saved P04 evidence;
+a new rollback or cleanup run needs separate approval.
 
 ---
 
-## สารบัญ Script
+## Script index
 
-| ไฟล์ Script | วัตถุประสงค์ | คำสั่งรัน | บันทึกหลักฐานที่ |
+| Script | Purpose | Command | Evidence output |
 |---|---|---|---|
-| [`cloud_check.py`](cloud_check.py) | ตรวจสอบ API Contract 12 รายการบน Public URL, วัด Cold-Start Time และ Error Rate แยกต่างหาก | `make smoke-test` | `reports/P04-cloud-check.json` |
-| [`verify_rollback.py`](verify_rollback.py) | ทดสอบและพิสูจน์กระบวนการ Rollback (สลับ Traffic 100% กลับเวอร์ชันเดิมแบบ Zero-Downtime) | `make verify-rollback [SIMULATE=1]` | `reports/P04-rollback-evidence.json` |
-| [`teardown.sh`](teardown.sh) | ลบ Cloud Resources ทั้งหมดบน Azure อย่างปลอดภัย พร้อม Dry-Run และ Confirmation Guard | `make teardown` หรือ `make teardown-dry-run` | Console / Dry-run logs |
+| [`cloud_check.py`](cloud_check.py) | Check 12 API-contract cases on the public URL; measure cold-start time and error rate separately | `make smoke-test` | `reports/P04-cloud-check.json` |
+| [`verify_rollback.py`](verify_rollback.py) | Route 100% traffic to an earlier revision, then check the endpoints | `make verify-rollback [SIMULATE=1]` | `reports/P04-rollback-evidence.json` |
+| [`teardown.sh`](teardown.sh) | Delete only the configured App and its revisions, with dry-run and confirmation guards | `make teardown` or `make teardown-dry-run` | Console / dry-run logs |
 
 ---
 
-## 1. คำอธิบายสถาปัตยกรรม Rollback (Native Revision Management)
+## 1. How rollback works (Native Revision Management)
 
-ระบบ Cloud บน **Azure Container Apps** ถูกตั้งค่าด้วย `activeRevisionsMode: Multiple` ในไฟล์ IaC (`cloudlayer/containerapp.template.yaml`):
+**Azure Container Apps** uses `activeRevisionsMode: Multiple` in the IaC file (`cloudlayer/containerapp.template.yaml`):
 
-- **ไม่ใช่การลบแล้วสร้าง Container App ใหม่:** ระบบยังคงใช้ Public FQDN URL เดิมเสมอ (`https://feedbackpulse-api...azurecontainerapps.io`)
-- **Blue/Green Instant Cutover (100 / 0):** แต่ละเวอร์ชันที่ Deploy จะถูกสร้างเป็น **Revision** ที่ไม่สามารถแก้ไขได้ (Immutable Snapshot) 
-  - `feedbackpulse-api--2zaws5o`: **[PREVIOUS STABLE]** เวอร์ชันเสถียรตัวเดิม
-  - `feedbackpulse-api--rev2`: **[NEW / LATEST]** เวอร์ชันใหม่ที่เพิ่งปล่อย
-- เมื่อเกิดปัญหาในเวอร์ชันใหม่ Load Balancer ของ Ingress จะโยก Traffic 100% กลับไปยังเวอร์ชันเดิมได้ทันทีในเวลา **~15 วินาที** โดยไม่ต้อง Build Docker Image ใหม่ และไม่ต้อง Revert Git Commit
+- **It does not delete/recreate the Container App.** The public FQDN stays the same (`https://feedbackpulse-api...azurecontainerapps.io`).
+- **Blue/green traffic cutover (100 / 0):** each deployed version becomes an immutable **revision**.
+  - `feedbackpulse-api--2zaws5o`: **[PREVIOUS STABLE]** previous stable version.
+  - `feedbackpulse-api--rev2`: **[NEW / LATEST]** newly released version.
+- If the new version has a problem, ingress can route 100% of traffic back to the old version. The recorded cutover took **~15 seconds**, without rebuilding the Docker image or reverting a Git commit.
 
 ---
 
-## 2. วิธีการทดสอบ Rollback (Rollback Testing Guide)
+## 2. Rollback testing guide
 
-สามารถทดสอบได้ **3 รูปแบบ** ตามความสะดวกในการใช้งานหรือการ Demo:
+There are **3 ways** to run the check or demonstrate it:
 
-### วิธีที่ 1: การทดสอบอัตโนมัติครบวงจรในคำสั่งเดียว (Automated 1-Click Test — แนะนำ)
+### Method 1: one-command automated rollback check
 
-คำสั่งนี้จะจำลองสถานการณ์ตั้งแต่ต้น: ปล่อยของใหม่ให้รับ Traffic 100% $\rightarrow$ สั่ง Rollback กลับของเดิม 100% $\rightarrow$ รอป้องกัน Cold-start $\rightarrow$ ยิงทดสอบ Endpoint:
+This simulates the sequence: new version receives 100% traffic $\rightarrow$ rollback to the old version at 100% $\rightarrow$ wait for cold-start readiness $\rightarrow$ test endpoints.
 
 ```bash
 make verify-rollback SIMULATE=1
 ```
-หรือ
+Or:
 ```bash
 python scripts/verify_rollback.py --simulate-new-first
 ```
 
 > [!NOTE]
-> **ทำไมต้องใช้ `SIMULATE=1` แทนที่จะเป็น `make verify-rollback --simulate-new-first`? และเลข `1` หมายถึงอะไร?**
+> **Why `SIMULATE=1`, not `make verify-rollback --simulate-new-first`? What does `1` mean?**
 >
-> 1. **ทำไมรัน `make verify-rollback --simulate-new-first` ตรงๆ ไม่ได้?**
->    - โปรแกรม **GNU Make** จะมองว่าอาร์กิวเมนต์ที่ขึ้นต้นด้วย `--` เป็น Option ของตัวคำสั่ง `make` เอง (เช่น `make --help`, `make --dry-run`)
->    - หากส่ง `--simulate-new-first` ต่อท้าย `make` ระบบจะแจ้งเตือน Error ทันทีว่า `make: unrecognized option '--simulate-new-first'` เพราะ Make ไม่ได้ส่ง Flag แปลกปลอมต่อให้คำสั่งภายในอัตโนมัติ
+> 1. **Why not pass `--simulate-new-first` straight to Make?**
+>    - **GNU Make** reads `--` arguments as its own options, such as `make --help` or `make --dry-run`.
+>    - `make verify-rollback --simulate-new-first` therefore fails with `make: unrecognized option '--simulate-new-first'`. Make does not automatically forward unknown flags to the inner command.
 >
-> 2. **เลข `1` ใน `SIMULATE=1` หมายถึงอะไร?**
->    - เลข `1` คือสัญลักษณ์แทนค่าจริง (**Boolean `True`** หรือ Flag Enabled) ตามแบบแผนสากลของ Unix CLI / Makefile
->    - ใน [`Makefile`](../Makefile) ถูกเขียนเงื่อนไขไว้ดังนี้:
+> 2. **What does `1` in `SIMULATE=1` mean?**
+>    - `1` conventionally means enabled (**Boolean `True`**) in Unix CLI / Makefile usage.
+>    - The [`Makefile`](../Makefile) uses this condition:
 >      ```makefile
 >      verify-rollback:
 >      	PYTHONPATH=src $(UV) run python scripts/verify_rollback.py $(if $(SIMULATE),--simulate-new-first,) $(ARGS)
 >      ```
->      ฟังก์ชัน `$(if $(SIMULATE),...)` ของ Make จะตรวจสอบว่า ถ้าตัวแปร `SIMULATE` ไม่เป็นค่าว่าง (เช่น เป็น `1`, `true`, `yes`) ระบบ Make จะทำการแทรก Flag `--simulate-new-first` เข้าไปในคำสั่ง Python เบื้องหลังให้โดยอัตโนมัติ
+>      Make's `$(if $(SIMULATE),...)` checks whether `SIMULATE` is non-empty, such as `1`, `true` or `yes`. If so, it adds `--simulate-new-first` to the Python command.
 >
-> 3. **สรุป 3 ทางเลือกในการส่ง Flag จำลองสถานการณ์:**
->    - `make verify-rollback SIMULATE=1` *(แนะนำที่สุด — สั้น กระชับ จำง่าย)*
->    - `make verify-rollback ARGS="--simulate-new-first"` *(ส่งผ่านตัวแปร ARGS เข้าไป)*
->    - `python scripts/verify_rollback.py --simulate-new-first` *(รันคำสั่งผ่าน Python โดยตรงโดยไม่ผ่าน Make)*
+> 3. **Three ways to pass the simulation flag:**
+>    - `make verify-rollback SIMULATE=1` *(recommended: short and easy to remember)*
+>    - `make verify-rollback ARGS="--simulate-new-first"` *(forward through ARGS)*
+>    - `python scripts/verify_rollback.py --simulate-new-first` *(run Python directly, without Make)*
 >
-> *(หมายเหตุ: หากรัน `make verify-rollback` เฉยๆ โดยไม่ใส่ `SIMULATE=1` สคริปต์จะทำการ Rollback ย้อนกลับจากสถานะ Traffic ปัจจุบันทันที)*
+> *Without `SIMULATE=1`, `make verify-rollback` starts rollback from the current traffic state.*
 
-**สิ่งที่สคริปต์ทำงาน:**
-1. แสดงรายชื่อ Revision ทั้งหมดและจัดลำดับเวลา (เก่าสุด = Stable, ใหม่สุด = Latest)
-2. สลับ Ingress ให้ New Revision (`rev2`) รับ Traffic 100% (จำลองเหตุการณ์ก่อนเกิดปัญหา)
-3. สั่ง Rollback สลับ Traffic 100% กลับมายัง Stable Revision (`2zaws5o`) ทันที
-4. รอระบบ Polling Readiness จนกว่า Container จะตื่นและโหลด RoBERTa Model พร้อม (`/ready` 200 OK)
-5. ยิงทดสอบ `/health`, `/ready`, `/predict` เพื่อยืนยันว่าระบบกลับมาปกติ 100%
-6. บันทึกหลักฐานลงใน `reports/P04-rollback-evidence.json`
+**What the script does:**
+1. Lists revisions in time order and uses the oldest as the default rollback target, labeled Stable. Age alone does not prove it is healthy; confirm a known-good target before running.
+2. Routes 100% traffic to the new revision (`rev2`) to simulate the pre-rollback state.
+3. Rolls back 100% traffic to the stable revision (`2zaws5o`).
+4. Polls readiness until the container wakes and the RoBERTa model is ready (`/ready` 200 OK).
+5. Checks `/health`, `/ready`, `/predict` to confirm normal responses.
+6. Saves evidence to `reports/P04-rollback-evidence.json`.
 
 ---
 
-### วิธีที่ 2: การทดสอบทีละขั้นตอนด้วยตนเอง (Manual Step-by-Step)
+### Method 2: manual step-by-step check
 
-หากต้องการสาธิตให้อาจารย์ดูทีละขั้นตอน:
+To demonstrate each step to the instructor:
 
-#### สเต็ป 1: สลับ Traffic ไปยังเวอร์ชันใหม่ (New Version 100%)
+#### Step 1: route 100% traffic to the new version
 ```bash
 make change-traffic REV=feedbackpulse-api--rev2
 ```
-*ตรวจผลลัพธ์:* รัน `make status` จะเห็น `rev2` ได้รับ Traffic 100%
+*Check:* `make status` should show `rev2` receiving 100% traffic.
 
-#### สเต็ป 2: สั่ง Rollback ย้อนกลับไปหาเวอร์ชันเดิมที่เสถียร (Rollback to Stable 100%)
+#### Step 2: roll back to the stable version at 100%
 ```bash
 make verify-rollback
 ```
-*(สคริปต์จะตรวจพบว่าของใหม่อยู่ที่ 100% และจะสั่งสลับกลับไปหาของเดิม `2zaws5o` ทันที พร้อมยิงทดสอบระบบให้)*
+*The script detects the new version at 100%, switches back to `2zaws5o` and tests the service.*
 
-#### สเต็ป 3: ตรวจสอบสถานะยืนยัน
+#### Step 3: confirm the status
 ```bash
 make status
 ```
-*ผลลัพธ์จะแสดงว่ากลับมาที่ Revision เดิมเรียบร้อย:*
+*The result should show traffic back on the previous revision:*
 ```json
 "Traffic": [
   {
@@ -107,69 +117,65 @@ make status
 
 ---
 
-### วิธีที่ 3: ปรับผ่านหน้าจอ Azure Portal (GUI Visualization)
+### Method 3: use Azure Portal
 
-1. เปิด Azure Portal $\rightarrow$ เข้าไปที่ **`feedbackpulse-api`**
-2. เมนูด้านซ้ายเลือก **Application $\rightarrow$ Revision management**
-3. ปรับค่าในช่อง **Traffic (%)**:
+1. Open Azure Portal $\rightarrow$ **`feedbackpulse-api`**.
+2. In the left menu, choose **Application $\rightarrow$ Revision management**.
+3. Set **Traffic (%)**:
    - `feedbackpulse-api--rev2`: **0%**
    - `feedbackpulse-api--2zaws5o`: **100%**
-4. กดปุ่ม **`💾 Save`** ด้านบน
-5. สามารถสลับเป็น Canary Deployment เช่น **50% / 50%** เพื่อกระจายโหลดได้เช่นกัน
+4. Click **`💾 Save`** at the top.
+5. A canary split such as **50% / 50%** is also possible.
 
 ---
 
-## 3. ตัวอย่างผลลัพธ์ที่บันทึกในรายงานหลักฐาน
+## 3. Example recorded evidence
 
-เมื่อรัน `verify_rollback.py` ผลลัพธ์จะถูกบันทึกเป็น JSON ใน [`reports/P04-rollback-evidence.json`](../reports/P04-rollback-evidence.json):
-
-```json
-{
-  "timestamp_utc": "2026-10-10T07:49:09Z",
-  "container_app": "feedbackpulse-api",
-  "resource_group": "itcs355-6688166",
-  "newest_revision": "feedbackpulse-api--rev2",
-  "previous_stable_revision": "feedbackpulse-api--2zaws5o",
-  "rollback_target_revision": "feedbackpulse-api--2zaws5o",
-  "shift_duration_seconds": 15.27,
-  "endpoint_verification": {
-    "health": { "status_code": 200, "latency_ms": 64.3 },
-    "ready": { "status_code": 200, "latency_ms": 63.28 },
-    "predict": { "status_code": 200, "latency_ms": 110.46 }
-  },
-  "status": "PASSED"
-}
-```
+Use the saved [`reports/P04-rollback-evidence.json`](../reports/P04-rollback-evidence.json)
+instead of a copied JSON example. The East Asia record is timestamped
+**10 October 2026, 08:13:33 UTC** and reports a **15.00-second traffic cutover**.
+The endpoint checks afterward returned 200 for `/health`, `/ready` and `/predict`.
+This is not the total recovery time or a measurement of uninterrupted availability,
+and it is not a Malaysia West rollback result. Running the script again with its
+default output path would overwrite this evidence file.
 
 ---
 
-## 4. คำสั่งทำความสะอาด Cloud Resources (Teardown Script — P04-T06)
+## 4. Cloud-resource cleanup (teardown — P04-T06)
 
-สคริปต์ [`teardown.sh`](teardown.sh) ใช้สำหรับทำความสะอาด Container App บน Azure เพื่อควบคุมงบประมาณค่าใช้จ่ายของ Azure for Students Subscription โดยมีนโยบายความปลอดภัย (**Safeguard Policy**) ดังนี้:
+[`teardown.sh`](teardown.sh) cleans up the Azure Container App to help control Azure for Students costs, with the following safeguards:
 
 > [!NOTE]
-> **ระบบตั้งค่าเริ่มต้นเป็นโหมดปลอดภัย (`--app-only`):**
-> คำสั่ง `make teardown` จะทำการลบ **เฉพาะตัว Container App (`feedbackpulse-api`) และ Revisions ทั้งหมดเท่านั้น** โดยจะยังคง **Azure Container Registry (ACR)** และ **Container Apps Environment** ไว้อย่างปลอดภัย
-> 
-> **ข้อดี:** หากต้องการ Deploy ใหม่อีกครั้ง สามารถทำได้ง่ายๆ เพียงแค่ `git push` ขึ้น branch `main` ระบบ GitHub Actions CD จะตรวจพบและทำการสร้าง Container App ตัวใหม่ให้โดยอัตโนมัติทันที
-> 
-> *(ส่วนคำสั่งลบ ACR และ Environment ถูก Comment ไว้ใน `scripts/teardown.sh` เพื่อป้องกันการเผลอลบ หากจบวิชาแล้วต้องการลบทุกอย่างถาวร สามารถเปิด Uncomment ได้ตามคำแนะนำในสคริปต์)*
+> **Default safe scope (`--app-only`):**
+> `make teardown` deletes **only the configured Container App and its revisions**.
+> The Environment, ACR, Log Analytics workspace, identities/role assignments,
+> monitoring dashboard, alert and action group are not removed by this script.
+>
+> **Current CD does not recreate a deleted App.** It updates an existing App and
+> fails if that App is missing. Older comments/output in `teardown.sh` still say
+> a push recreates it; that message does not match the current CD workflow.
 
-### 4.1 ทดสอบจำลองการลบ (Dry-Run Preview — ปลอดภัย ไม่มีการลบจริง)
+Keep presentation resources until the demo is finished. Later cleanup needs a
+reviewed target list and approval, including the alert/action group separately.
+Do not uncomment base-resource deletion commands or delete the whole resource
+group as routine cleanup: the ACR and Log Analytics workspace are shared with
+coursework labs. Keeping these resources can still incur costs after App deletion.
+
+### 4.1 Preview deletion with dry-run — no actual deletion
 ```bash
 make teardown-dry-run
-# หรือ
+# Or
 ./scripts/teardown.sh --dry-run
 ```
-*ระบบจะจำลองและแสดงรายชื่อคำสั่ง CLI ที่จะถูกรันให้ตรวจสอบก่อน โดยไม่มีการแก้ไขหรือลบ Cloud Resource ใดๆ*
+*Prints the planned CLI commands for review without changing/deleting cloud resources.*
 
-### 4.2 สั่งลบแบบ Interactive (มีถามยืนยันก่อนลบเสมอ)
+### 4.2 Interactive deletion with confirmation
 ```bash
 make teardown
-# หรือ
+# Or
 ./scripts/teardown.sh
 ```
-*ระบบจะแสดงรายการ Resource และหยุดรอให้พิมพ์ `yes` เพื่อยืนยันก่อนเริ่มลบเสมอ เพื่อความปลอดภัยสูงสุด*
+*Shows affected resources and waits for an explicit `yes` before deletion.*
 
 
 
