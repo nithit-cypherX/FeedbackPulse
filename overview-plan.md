@@ -1,6 +1,6 @@
 # FeedbackPulse — Overview Plan
 
-**Latest work point — 2026-10-12:** P05 `done` within the approved local-demo/monitoring scope; P06 `in_progress` for final submission checks. The README, model card, cost estimate and failure story are written, and the documentation has been translated to English. These files and the demo/evidence changes still need the remaining pre-push checks and commit/push approval. See [P06 handoff](#p06--final-submission-and-handoff).
+**Latest work point — 2026-10-12:** P05 `done` within the approved local-demo/monitoring scope. P06 submission checks are complete, and the reviewed demo, documentation and evidence were pushed to `main` in `df46c10`. [CI #12](https://github.com/nithit-cypherX/FeedbackPulse/actions/runs/38211616924) passed; [CD #10](https://github.com/nithit-cypherX/FeedbackPulse/actions/runs/38211845155) was skipped with `FEEDBACKPULSE_CD_ENABLED=false`. No new deployment. Presentation and later cleanup remain separate from submission. See [P06 handoff](#p06--final-submission-and-handoff).
 
 Keep the team's existing P01–P04 work and the verified CD fix as the base. P05-T03 remains canceled; no new failure/recovery experiment or traffic-spike button is required. The local demo is stopped. Cloud results below are dated evidence, not a live status check; presentation resources have not been cleaned up in this documentation step.
 
@@ -186,11 +186,12 @@ See [P04 phase plan](docs/plans/P04-deployment-and-cicd.md) · [test/measurement
 
 ## P06 — final submission and handoff
 
-**Status: `in_progress`, 12 October 2026.**
+**Status: submission checks and push complete, 12 October 2026.** P06 remains `in_progress` only for presentation and later approved cleanup.
 
 - **Written:** [demo instructions and evidence index](README.md), [model card](MODEL_CARD.md), [cost estimate](reports/cost-report.md), and [failure story](README.md#failure-story-model-unavailable-and-rollback). Plans and reports are in English; the original experimental results are preserved.
 - **Documentation review:** current status, configuration loading, historical rollback examples and cleanup scope have been clarified. The cost is a scenario estimate, not an Azure bill; the two failure-story experiments remain separate.
-- **Still to check before push:** relevant tests/lint, the exact file set, secrets and screenshot privacy, and remote/CI/CD state. Then review the commit/push scope. Earlier test passes do not replace this final check.
+- **Submission checks completed:** 319 tests and Ruff passed in the existing environment. File selection, secrets, screenshot privacy and remote/CI/CD state were reviewed. Only the approved 63 files were committed and pushed in `df46c10`; the 10 excluded screenshots stayed local and were not deleted.
+- **Push verified:** local `main` and GitHub `main` matched `df46c10`. [CI #12](https://github.com/nithit-cypherX/FeedbackPulse/actions/runs/38211616924) passed; [CD #10](https://github.com/nithit-cypherX/FeedbackPulse/actions/runs/38211845155) and its deploy job were skipped. CD remains paused with `FEEDBACKPULSE_CD_ENABLED=false` at the user's request.
 - **Presentation and cleanup:** keep the required resources until the presentation. Later cleanup needs approval and a checked target list; shared lab resources must not be deleted as part of routine App cleanup. See the [handoff checklist](README.md#remaining-submission-work).
-- **Limits:** no new benchmark, failure drill, alert test, API/CD change or Azure operation in this documentation step. No commit/push. Member-name placeholders stay as the user requested.
+- **Limits:** the submission push did not deploy a new API version. No new benchmark, failure drill, alert test or Azure resource change was made for submission. Member-name placeholders stay as the user requested.
 

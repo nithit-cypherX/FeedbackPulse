@@ -7,24 +7,24 @@ not train a new model in this project.
 
 ## Status
 
-Last recorded checks: **11 October 2026**. The API has been deployed to Azure
-Container Apps, CI/CD has passed, and the localhost demo has called the real API.
-The monitoring dashboard and traffic alert have also been checked, including
-email receipt confirmed by the owner. These are recorded results, not a live
-service-status check.
+**Repository update: 12 October 2026.** The demo, documentation and reviewed
+evidence were pushed to `main` in commit `df46c10`.
+[CI #12](https://github.com/nithit-cypherX/FeedbackPulse/actions/runs/38211616924)
+passed. CD is paused with `FEEDBACKPULSE_CD_ENABLED=false`, and
+[CD #10](https://github.com/nithit-cypherX/FeedbackPulse/actions/runs/38211845155)
+was skipped. This submission push did not deploy a new API version.
 
-We are now preparing the final documentation in P06. The submission is not yet
-complete; see the remaining items below.
+Cloud and live-demo checks were last recorded on **11 October 2026**. The API
+deployment, localhost demo, monitoring dashboard and traffic alert were checked,
+including email receipt confirmed by the owner. These are recorded results,
+not a live service-status check. Presentation and later cleanup are separate
+from the repository submission.
 
 ## Run the local demo
 
 The page runs on your laptop and sends requests through a local Python relay to
 the deployed API. The relay keeps the service token out of the browser. It does
 not load the model locally or deploy anything to Azure.
-
-**Working-copy note:** `demo/`, the dashboard export and screenshots are still
-local, uncommitted files. The steps below apply to this working copy; a fresh
-clone of `main` does not include these files yet.
 
 You need Python **3.13**, `uv`, Bash (for example, Ubuntu in WSL), internet access,
 and the deployed API's `SERVICE_TOKEN` from its owner. An Azure login is not
@@ -107,11 +107,10 @@ Evidence: [P04 rollback report](reports/P04-evidence.md) and
 
 ## Remaining submission work
 
-- **Before push:** run the relevant tests/lint, review the exact file set, and
-  check secrets, screenshot privacy and remote/CI/CD state. A push to `main`
-  triggers CI and can trigger deployment if `FEEDBACKPULSE_CD_ENABLED=true`.
-  Include only reviewed files after commit/push approval. Remove the working-copy
-  note above when those files are included in the submission commit.
+- **Submission checks completed:** 319 local tests and Ruff passed before the
+  push. The submitted file set, secrets and screenshot privacy were reviewed.
+  Commit `df46c10` is on `main`, with passing CI and skipped CD as linked above.
+  Keep CD paused unless deployment is separately approved.
 - **Before the presentation:** keep the App and monitoring resources needed for
   the demo. Start the localhost page when needed and stop it afterward; stopping
   the local page does not stop Azure resources. Use the saved failure/rollback
