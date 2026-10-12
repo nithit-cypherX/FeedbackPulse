@@ -10,12 +10,12 @@ name: CD
 
 on: # -- Trigger condition / Event trigger
   workflow_run:
-    workflows: [CI] # CD จะทำงานเมื่อ CI บน default branch completed
+    workflows: [CI] # CD will trigger when CI is completed and push to branch [codex/bootstrap, main]
     types: [completed]
-    branches:
+    branches:  
       - "codex/bootstrap"
       - main
-  workflow_dispatch: # รองรับการสั่ง deploy แบบ manual ผ่าน GitHub Actions UI
+  workflow_dispatch: #make github actions have options to trigger it manually
 
 permissions:
   contents: read
@@ -47,7 +47,7 @@ jobs:
            github.event_name == 'workflow_dispatch') }}
     name: Build, Push & Deploy to Azure Container Apps
     runs-on: ubuntu-latest
-    environment: production # เพื่อให้ GitHub บันทึก Deployment Tracking, แสดง URL ของ Container App และสถานะในหน้าหลักของ Repository
+    environment: production # For GitHub to save Deployment Tracking, show URL of Container App and show status in the main page of Repository
     env:
       AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
       AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
@@ -91,14 +91,14 @@ jobs:
       - name: Install dependencies from lockfile
         run: uv sync --frozen --all-groups
 
-      - name: Cache model artifact # แคชโมเดล artifact เพื่อความรวดเร็วในการ deploy
+      - name: Cache model artifact # caching model artifact for fast deployment
         id: cache-artifact
         uses: actions/cache@v4
         with:
           path: artifacts/
           key: model-artifact-${{ hashFiles('src/feedbackpulse/model_files.py', 'src/feedbackpulse/package_artifact.py') }}
 
-      - name: Assemble model artifact # ประกอบโมเดล artifact ก่อน docker build (เนื่องจาก artifacts/ ถูกละเว้นใน .gitignore)
+      - name: Assemble model artifact # assembling model artifact before docker build (since artifacts/ is ignored in .gitignore)
         run: |
           if [ ! -d "artifacts/sentiment-6e7ff9fbc17c/model" ]; then
             echo "Artifacts not found. Assembling model artifact..."
@@ -255,6 +255,6 @@ jobs:
 
           echo "==> All 3 smoke tests passed on live deployment."
 
-      - name: Clean up temporary rendered YAML # ลบไฟล์ config ที่ถูกสร้างขึ้นชั่วคราว (rendered_containerapp.yaml) ทันทีหลัง deploy เสร็จสิ้น
+      - name: Clean up temporary rendered YAML # clean up temporary rendered YAML (rendered_containerapp.yaml) after deployment
         if: always()
         run: rm -f rendered_containerapp.yaml 
