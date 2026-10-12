@@ -53,7 +53,7 @@ different API. There is no new monitoring page or automatic polling in the demo.
 All charts cover the **whole App**, not just `/predict`, and inherit the dashboard
 time range (default **Past 24 hours, UTC**). Use **Refresh** manually; Azure metrics
 can arrive after a delay. An absent series means Azure returned no data for that
-category; we do not turn it into a measured zero. No alert was created in this step.
+category; we do not turn it into a measured zero.
 
 The exported [dashboard JSON](../cloudlayer/azure-dashboard.json) preserves the
 layout and metric settings. In Azure Portal's Dashboard view, use **Upload** to
@@ -103,8 +103,7 @@ When notified, open the dashboard and compare request volume, latency and errors
 
 Azure Portal estimated **USD 0.10/month** for this one monitored time series,
 before any applicable free allowance; this is not an actual cost report. The
-test also uses the existing App's compute. No new App, role, model, API/CD change
-or log-query alert was needed.
+test also uses the existing App's compute.
 
 On 2026-10-11, one readiness preflight returned HTTP 200 in 41.591 seconds. Then
 25 sequential `GET /ready` requests all returned HTTP 200 between
@@ -156,5 +155,4 @@ then submitted once. All three returned model version
 These are three individual UI requests, not an accuracy evaluation, p95 benchmark
 or cold-start measurement. Scores are rounded to three decimals by the page.
 The earlier part-2 screenshots remain explicitly labelled as mock evidence.
-The local test server was stopped after verification; the Azure app was not
-changed. API/CD, dependencies and cloud resources were left untouched.
+The local test server was stopped after verification.

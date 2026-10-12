@@ -4,17 +4,16 @@ Original agreement: 2026-10-05; text-length decision added on 2026-10-07.
 
 Main plan: [Overview plan](../../overview-plan.md) · Project scope: [Proposal](../../PROPOSAL.md)
 
-**How to read this record:** This is the API agreement from P01, not a current list of unfinished work. Implementation and later checks are in the [P03 plan](P03-local-backend.md) and [P03 evidence](../../reports/P03-evidence.md). The approved localhost demo in P05 does not change this API contract.
+This is the P01 API contract. Implementation checks are in the [P03 plan](P03-local-backend.md) and [P03 evidence](../../reports/P03-evidence.md). The localhost demo calls this API without changing its contract.
 
 ## 1. Status and scope
 
-- **Main agreement:** The user approved this API design.
 - **P01-T02 status:** `done` for the agreement only. The open text-length limit was confirmed in P02-T03 on 2026-10-07; see section 7.
 - **Implementation and testing:** Not implemented or tested at this planning stage.
 - **Scope:** Accept one English feedback message and return a sentiment that the calling system can use to group messages for human review.
 - **Out of scope:** Batch processing, CSV uploads, frontend, user registration, customer replies and urgency classification.
 
-This is the team's reference agreement, not proof that the system works. “Locked” means we must agree on API behavior changes and update this file. It does not mean making the file read-only or creating another copy of the contract.
+Changes to API behavior must also update this contract and its tests.
 
 ## 2. Agreed endpoints
 
@@ -24,7 +23,7 @@ This is the team's reference agreement, not proof that the system works. “Lock
 | `GET /health` | Check whether the app responds | `200` when it responds; this does not prove the model is ready |
 | `GET /ready` | Check whether the model loaded and can serve requests | `200` when ready; `503` otherwise |
 
-If the app is running but the model cannot load, `/health` may pass while `/ready` must fail. These checks serve different purposes and were planned for the failure exercise in P05.
+If the app is running but the model cannot load, `/health` may pass while `/ready` must fail. These checks distinguish a running API from a model that is ready to serve requests.
 
 ## 3. Request and response
 
@@ -125,7 +124,7 @@ These are the **original acceptance criteria, not a current to-do list**. The bo
 - [ ] Unexpected errors return `500` without exposing secrets or a stack trace.
 - [ ] App-generated errors follow the agreed format; logs contain neither service tokens nor full feedback text.
 
-The cloud failure and alert demonstration was originally planned for P05, not T02. The user later canceled the new failure/recovery experiment; see the [approved P05 scope](../../overview-plan.md#p05--local-demo-and-small-monitoring-setup-approved-scope-2026-10-11). The traffic alert is separate evidence, not a model-failure alert.
+The P05 traffic alert checks request volume, not model failure. See the [P05 scope](../../overview-plan.md#p05--local-demo-and-small-monitoring-setup-2026-10-11); no combined cloud failure-to-alert-to-recovery experiment was run.
 
 ## 7. Decisions and original handoff
 
@@ -148,8 +147,4 @@ Why 512: `config.json` sets `max_position_embeddings = 514`, and RoBERTa reserve
 
 ### What remained at handoff
 
-This describes the P01 handoff, before P03 implementation. It is not a current blocker.
-
-The API agreement was complete, but **it was not yet implemented or tested**. API boundary checks from section 6 belonged to P03.
-
-System structure and checks were agreed in [P01-T03](P01-T03-system-structure.md). API implementation belonged to P03. This agreement itself did not start development, create cloud resources or test the system.
+At the P01 handoff, this contract was a design, not a tested implementation. Section 6's boundary checks were implemented in [P03](P03-local-backend.md). [P01-T03](P01-T03-system-structure.md) records the system structure.

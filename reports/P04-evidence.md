@@ -3,15 +3,13 @@
 - **Report date:** 2026-10-10
 - **Reported phase status:** `done` (100% complete, P04-T01 through P04-T06)
 - **Owner:** Person 2 — Backend and deployment
-- **Main course criterion:** **R2 (Deployment & CI/CD)**
-- **Supporting criteria:** **R1 (Quality & Standards)**, **R3 (Security & Portability)**, **R4 (Readiness/Liveness Probe Isolation)**
 - **References:** [PROPOSAL.md](../PROPOSAL.md) · [P04 Plan](../docs/plans/P04-deployment-and-cicd.md) · [P01-T02 API Contract](../docs/plans/P01-T02-api-contract.md) · [P01-T03 System Structure](../docs/plans/P01-T03-system-structure.md)
 
 ---
 
 ## Summary
 
-This report records the team's deployment and tests of **FeedbackPulse**, an airline-feedback sentiment classifier, on **Azure Container Apps** in East Asia (Consumption plan). The reported R2 results are:
+This report records the team's deployment and tests of **FeedbackPulse**, an airline-feedback sentiment classifier, on **Azure Container Apps** in East Asia (Consumption plan). The recorded deployment and test results are:
 
 | Check | Reported result | Target | Status |
 |---|---|---|:---:|
@@ -250,7 +248,7 @@ Target resources planned for deletion:
 | **Command behavior** | Checks the subscription and prints planned CLI commands | Runs `az containerapp delete` |
 | **Confirmation** | **None**: exits after the preview | **Prompt** (`Are you sure? yes/N`); requires `yes` |
 | **Recreation** | Existing service stays online | **Original intended flow:** push `main` and CD recreates the App automatically |
-| **Use** | Preflight review; show the instructor commands without taking the service down; capture dry-run logs | Remove the App to clear its state or test recreation through CI/CD |
+| **Use** | Preview commands without taking the service down; capture dry-run logs | Remove the App to clear its state or test recreation through CI/CD |
 
 #### Command details
 - **`make teardown-dry-run` (Preview / Simulation):**
@@ -267,7 +265,7 @@ Target resources planned for deletion:
 
 ---
 
-## 9. P04 phase acceptance checklist — R2
+## 9. Deployment verification checklist
 
 - [x] **CI pipeline:** GitHub Actions passes `ruff check`, portability audit, template validation and all `pytest` tests (70/70, 100%).
 - [x] **CI blocker:** faulty changes or failing tests cannot deploy.

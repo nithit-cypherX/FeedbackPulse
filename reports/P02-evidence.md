@@ -2,7 +2,7 @@
 
 This report records **actual P02 runs and measurements**. Agreements and task status are in the [phase plan](../docs/plans/P02-model-pipeline.md), rather than repeated here.
 
-**Historical handoff record:** References to work for P03–P05 describe the original handoff, not current unfinished tasks. Later integration/container checks are in the [P03 plan](../docs/plans/P03-local-backend.md). The new P05 failure/recovery experiment was later canceled; the [failure story](../README.md#failure-story-model-unavailable-and-rollback) uses separate existing experiments. Measurements and limitations below remain unchanged.
+**Historical results:** Later integration/container checks are in the [P03 plan](../docs/plans/P03-local-backend.md). The [failure story](../README.md#failure-story-model-unavailable-and-rollback) records separate missing-model and rollback experiments; the proposed new P05 incident drill was canceled.
 
 | | Registered run value |
 |---|---|
@@ -329,7 +329,7 @@ model family — readable in logs and response bodies
 
 | Decision | Reason |
 |---|---|
-| **3 parts, not one hash** | The middle `artifact_id` makes it easy to see whether two releases use the same weights, useful during rollback (R2). One hash hides that distinction |
+| **3 parts, not one hash** | The middle `artifact_id` makes it easy to see whether two releases use the same weights, useful during rollback. One hash hides that distinction |
 | **Content-addressed, not a counter** | No central service is needed to issue the next number, especially before choosing artifact storage |
 | **Digest covers code/environment, not only weights** | `predict()` also depends on our code. If preprocessing changes but the version does not, the version becomes misleading |
 | **31 characters long** | Fits JSON responses/logs without being unwieldy |
@@ -361,7 +361,7 @@ Started with only `sentiment-6e7ff9fbc17c-0110c462`, then traced each layer, **r
 
 **Each entry keeps its own evaluation-result copy** beside it as `<run_id>-evaluation.json`, instead of pointing to `reports/P02-T05-evaluation-result.json`, which is overwritten on every run.
 
-**Two bugs found and fixed:** both made entries claim something that could not be verified, against R1/R2:
+**Two bugs found and fixed:** both let registry entries claim lineage that could not be verified:
 
 1. The first entry pointed to a **shared result path** overwritten each run, so **rerunning evaluation immediately broke traceability**. Fixed by keeping a copy beside the entry, with a test that overwrites the shared file and checks that the entry still resolves.
 2. That fix named the copy from `model_version`, requiring **`result_file` to be added to lineage after hashing**. The saved entry then **could not reproduce its own version**. The first check missed this because it compared against `None`, which was always true. Fixed by naming the copy from the already-available `run_id`, plus a **test that recomputes the version from stored lineage**. Layer 1 above is now covered by a CI regression test.
@@ -378,7 +378,7 @@ All entries created by the faulty code were deleted because they could not be re
 
 ## 6. Startup time and memory
 
-These measurements are not R1 evidence, but were requested for P02–P03 in [P01-T03 §5](../docs/plans/P01-T03-system-structure.md#5-reasons-and-trade-offs). **Two sessions on different days gave roughly twofold timing differences, while peak RSS was consistent. The cause is unknown; CPU load was not recorded. Timing here is not an acceptance criterion.**
+These measurements inform startup and memory decisions in [P01-T03 §5](../docs/plans/P01-T03-system-structure.md#5-reasons-and-trade-offs). **Two sessions on different days gave roughly twofold timing differences, while peak RSS was consistent. The cause is unknown; CPU load was not recorded. Timing here is not an acceptance criterion.**
 
 **Method:** multiple runs, each in a new process, using `resource.getrusage().ru_maxrss` at three points: after framework import, weights loading and 50 predictions. There are **two easy-to-miss measurement traps**:
 
@@ -429,14 +429,14 @@ These measurements are not R1 evidence, but were requested for P02–P03 in [P01
 |---|---|---|
 | **When bytes move** | With the image pull | Image pull **plus** a separate artifact download |
 | **Cold start** | Artifact is already in the image; image grows by 477 MiB | **Every startup** adds a 477 MiB download after pulling the image. [Proposal §3](../PROPOSAL.md#3-serving-pattern-and-requirements) says the service **scales to zero when idle**, so cold starts may be frequent |
-| **Rollback (R2)** | **Revert one item**: image revision carries code + artifact together | **Revert two items**: image revision and blob pointer, which can get out of sync |
+| **Rollback** | **Revert one item**: image revision carries code + artifact together | **Revert two items**: image revision and blob pointer, which can get out of sync |
 | **Budget (Proposal §6)** | Fits the assumed registry; no extra egress beyond image pulls | Fits the assumed 5 GB blob storage, but **adds egress on every cold start**, using the $3.55 reserved for "requests, network, operations" |
-| **Failure demo (R4)** | Modify a file in the running container or deploy an intentionally broken image | **Easier**: delete/rename the blob and readiness should fail |
+| **Model-unavailability testing** | Modify a file in the running container or deploy an intentionally broken image | **Easier**: delete/rename the blob and readiness should fail |
 | **Change the model** | Rebuild + redeploy | Point configuration to a new blob |
 
 ### Why option A was chosen
 
-**Keep the binding claimed by `model_version` real — the main reason.** The digest covers code commit + environment + artifact, because `predict()` depends on our code as well as weights. A runtime-swappable blob would let `model_version` claim a binding that nothing enforces: someone could change the blob while the API still returns the old version. Other reasons/trade-offs are in the comparison above. **Original failure-demo handoff:** A new experiment would have needed a changed file inside the container or an intentionally broken image, rather than a deleted blob. The user later canceled that experiment; this is not a current task or an instruction to change the running App.
+**Keep the binding claimed by `model_version` real — the main reason.** The digest covers code commit + environment + artifact, because `predict()` depends on our code as well as weights. A runtime-swappable blob would let `model_version` claim a binding that nothing enforces: someone could change the blob while the API still returns the old version. Other reasons/trade-offs are in the comparison above. **Testing limitation:** The proposed cloud experiment would have used a changed container file or a broken image, rather than deleting a blob. That experiment was canceled; it is not a recorded result or an instruction to change the running App.
 
 The chosen option supports the real artifact, as checked in section 3: ordinary files with no symlinks can be copied into the image; offline loading works; core code has no cloud calls; and 477 MiB fits the Basic container registry assumed in Proposal §6.
 
@@ -479,7 +479,7 @@ Locally, reading 477 MiB from a warm page cache took **0.10–0.15 seconds**. It
 
 **No multi-version release process yet.** `registry.main()` registers the only artifact present and rejects multiple bundles instead of guessing. Multi-version handling is needed for **P04** rollback but was not designed yet; a `ponytail:` marker records this.
 
-**The registry is files in Git, not a service.** This was chosen because Git files provide the traceability R1 needs. If a service with its own registry is selected later, these entries remain reference records. **Migration vs maintaining both has not been assessed.**
+**The registry is files in Git, not a service.** This was chosen because Git files can record the required model lineage. If a service with its own registry is selected later, these entries remain reference records. **Migration vs maintaining both has not been assessed.**
 
 **Artifact storage was chosen without Azure experiments.** The machine had no `az` CLI or credentials; resource creation belongs to P04. The decision used design properties and Proposal budget assumptions, **not cloud measurements**.
 

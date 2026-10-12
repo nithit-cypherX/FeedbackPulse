@@ -1,6 +1,6 @@
 # FeedbackPulse — Automation & Verification Scripts
 
-This folder contains smoke-test and rollback-verification scripts for **Azure Container Apps**, supporting **R2 (Deployment & CI/CD)** in ITCS355.
+This folder contains smoke-test, rollback-verification and cleanup scripts for **Azure Container Apps**.
 
 **Before running commands:** the revision names and recorded examples below are
 from the team's East Asia deployment, not the later Malaysia West deployment.
@@ -9,8 +9,9 @@ group, App, endpoint, revision and matching token before use; do not assume that
 every command selects the latest deployment automatically.
 
 **Rollback changes live traffic, including with `SIMULATE=1`.** It is not an
-offline simulation. For the current presentation, use the saved P04 evidence;
-a new rollback or cleanup run needs separate approval.
+offline simulation. Use the saved P04 results to inspect past behavior without
+changing traffic. Confirm the target and obtain the operator's approval before
+running a new rollback or cleanup.
 
 ---
 
@@ -87,7 +88,7 @@ python scripts/verify_rollback.py --simulate-new-first
 
 ### Method 2: manual step-by-step check
 
-To demonstrate each step to the instructor:
+To inspect and change traffic step by step:
 
 #### Step 1: route 100% traffic to the new version
 ```bash
@@ -155,11 +156,11 @@ default output path would overwrite this evidence file.
 > fails if that App is missing. Older comments/output in `teardown.sh` still say
 > a push recreates it; that message does not match the current CD workflow.
 
-Keep presentation resources until the demo is finished. Later cleanup needs a
-reviewed target list and approval, including the alert/action group separately.
+Keep resources while they are still needed. Before cleanup, review the exact
+targets with the resource owner, including the alert/action group separately.
 Do not uncomment base-resource deletion commands or delete the whole resource
 group as routine cleanup: the ACR and Log Analytics workspace are shared with
-coursework labs. Keeping these resources can still incur costs after App deletion.
+other projects. Keeping these resources can still incur costs after App deletion.
 
 ### 4.1 Preview deletion with dry-run — no actual deletion
 ```bash

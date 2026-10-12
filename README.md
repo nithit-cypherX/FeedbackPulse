@@ -7,18 +7,15 @@ not train a new model in this project.
 
 ## Status
 
-**Repository update: 12 October 2026.** The demo, documentation and reviewed
-evidence were pushed to `main` in commit `df46c10`.
-[CI #12](https://github.com/nithit-cypherX/FeedbackPulse/actions/runs/38211616924)
-passed. CD is paused with `FEEDBACKPULSE_CD_ENABLED=false`, and
-[CD #10](https://github.com/nithit-cypherX/FeedbackPulse/actions/runs/38211845155)
-was skipped. This submission push did not deploy a new API version.
+**Cloud and live-demo checks — 11 October 2026:** the API deployment, localhost demo,
+monitoring dashboard and traffic alert were checked, including email receipt
+confirmed by the owner. These are dated results, not a live service-status check.
 
-Cloud and live-demo checks were last recorded on **11 October 2026**. The API
-deployment, localhost demo, monitoring dashboard and traffic alert were checked,
-including email receipt confirmed by the owner. These are recorded results,
-not a live service-status check. Presentation and later cleanup are separate
-from the repository submission.
+The local suite passed **319 tests** and Ruff before commit `df46c10`.
+[CI #12](https://github.com/nithit-cypherX/FeedbackPulse/actions/runs/38211616924)
+passed; [CD #10](https://github.com/nithit-cypherX/FeedbackPulse/actions/runs/38211845155)
+was skipped with `FEEDBACKPULSE_CD_ENABLED=false`. That push did not deploy a
+new API version.
 
 ## Run the local demo
 
@@ -63,7 +60,7 @@ timeouts, privacy limits and screenshots.
 | Model pipeline | [P02 evidence](reports/P02-evidence.md) | Evaluation, repeatability, pinned model/data versions, packaging and registry lineage |
 | API and local checks | [API contract](docs/plans/P01-T02-api-contract.md), [P03 evidence](reports/P03-evidence.md) | Inputs, authentication, validation, health/readiness and local model-unavailable checks |
 | Team deployment results | [P04 evidence](reports/P04-evidence.md) | East Asia API checks, warm p95 of 0.213 s at two concurrent users, and a 15 s rollback traffic cutover |
-| Latest automated deployment | [CI #11](https://github.com/nithit-cypherX/FeedbackPulse/actions/runs/38139654748), [CD #9](https://github.com/nithit-cypherX/FeedbackPulse/actions/runs/38139856763), [P04 handoff](docs/plans/P04-deployment-and-cicd.md) | Passing CI/CD for commit `8d3964c` in Malaysia West, including readiness and smoke checks |
+| Latest automated deployment | [CI #11](https://github.com/nithit-cypherX/FeedbackPulse/actions/runs/38139654748), [CD #9](https://github.com/nithit-cypherX/FeedbackPulse/actions/runs/38139856763), [P04 deployment history](docs/plans/P04-deployment-and-cicd.md) | Passing CI/CD for commit `8d3964c` in Malaysia West, including readiness and smoke checks |
 | Demo and monitoring | [Demo guide and evidence](demo/README.md) | Three live sentiment examples, three dashboard charts and a traffic alert that reached the owner's email |
 | Cost estimate | [Cost per 1,000 predictions](reports/cost-report.md) | Scenario assumptions, rates, calculation, shared-cost treatment and exclusions; not an actual Azure bill |
 | Architecture and operations | [System structure](docs/plans/P01-T03-system-structure.md), [cloud adapter](cloudlayer/README.md), [operations scripts](scripts/README.md) | System design, deployment configuration and existing operational commands |
@@ -72,7 +69,7 @@ The East Asia latency/rollback results and the Malaysia West CD/demo results
 come from different deployments. We have not repeated the East Asia benchmarks
 in Malaysia West. The demo's response time is one browser round trip, not p95.
 The P04 report is the team's earlier record; use the linked CI/CD runs and
-handoff for the later Malaysia West deployment.
+history for the later Malaysia West deployment.
 
 ## Failure story: model unavailable and rollback
 
@@ -105,27 +102,15 @@ traffic-change time—not the total recovery time.
 Evidence: [P04 rollback report](reports/P04-evidence.md) and
 [recorded result](reports/P04-rollback-evidence.json).
 
-## Submission status and presentation notes
+## Operational notes
 
-- **Submission checks completed:** 319 local tests and Ruff passed before the
-  push. The submitted file set, secrets and screenshot privacy were reviewed.
-  Commit `df46c10` is on `main`, with passing CI and skipped CD as linked above.
-  Keep CD paused unless deployment is separately approved.
-- **Before the presentation:** keep the App and monitoring resources needed for
-  the demo. Start the localhost page when needed and stop it afterward; stopping
-  the local page does not stop Azure resources. Use the saved failure/rollback
-  evidence instead of running a new incident drill.
-- **After the presentation, with approval:** review the alert/action group and
-  App cleanup, then any other project-only resources that are no longer needed.
-  Check exact targets and shared use first. Do not delete the shared ACR, Log
-  Analytics workspace or the whole resource group as routine project cleanup.
-  `make teardown` deletes only the App and its revisions, not all resources or
-  the alert. Current CD updates an existing App; a push will not recreate a
-  deleted App. See the [cleanup guide](scripts/README.md#4-cloud-resource-cleanup-teardown--p04-t06).
+- CD is paused (`FEEDBACKPULSE_CD_ENABLED=false`).
+- Stopping the local demo does not stop Azure resources.
+- `make teardown` removes only the App and its revisions, not monitoring or
+  shared resources. CD updates an existing App; a push will not recreate a
+  deleted App. See the [cleanup guide](scripts/README.md#4-cloud-resource-cleanup-teardown--p04-t06)
+  before removing resources.
 
 See the [original proposal](PROPOSAL.md) for the initial scope and budget, and
-the [overview plan](overview-plan.md) for task history. Some older plan entries
-describe earlier states; they are not the latest deployment result.
-
-This repository is for the team project. Individual coursework and labs remain
-in the separate [MLOps Engineering repository](https://github.com/nithit-cypherX/mlops-engineering).
+the [overview plan](overview-plan.md) for development history. Dated plan entries
+describe the conditions at each check, not the current state of Azure.

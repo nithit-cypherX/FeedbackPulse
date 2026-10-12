@@ -1,10 +1,9 @@
 # P03 — Local backend development and test evidence
 
-**Historical test report:** Results below belong to the 2026-10-08 test run. Later review fixes and container checks are in the [P03 plan](../docs/plans/P03-local-backend.md). The handoff to P04 is history, not a new deployment task.
+**Historical test report:** Results below belong to the 2026-10-08 test run. Later review fixes and container checks are in the [P03 plan](../docs/plans/P03-local-backend.md). The final section records the original P03-to-P04 integration notes.
 
 - **Test date:** 2026-10-08
 - **Status:** `done`
-- **Course criteria:** **R2 (Deployment & Container readiness)**, **R4 (Readiness/Liveness probe separation)**
 - **Built image:** `feedbackpulse:local` (image id: `d7a3500d767a`)
   - **Base image builder:** `python@sha256:bf44cdfcb76cd3b41e879bc058fc37ec5872002ccfde7fcb765e218cde0cd79c` (pinned strictly by digest, no tag)
   - **Uv binary builder:** `ghcr.io/astral-sh/uv@sha256:61d393e44e249f2e4b526b6c7ddcecce245946826e608e11c93ad4f5bba55b21` (pinned strictly by digest, no tag)
@@ -135,12 +134,12 @@ docker run -d --name feedbackpulse-broken -p 8001:8000 -e MODEL_DIR="/nonexisten
    ```
 4. `POST /predict` returned **HTTP 503 Service Unavailable**, without making up a prediction.
 
-This confirms readiness/liveness separation in the tested case. It was a base for the originally planned P05 failure drill, which the user later canceled. The presentation now uses this result and the separate P04 rollback evidence in the [failure story](../README.md#failure-story-model-unavailable-and-rollback); it does not claim one cloud failure-to-alert-to-recovery experiment.
+This confirms readiness/liveness separation in the tested case. The [failure story](../README.md#failure-story-model-unavailable-and-rollback) pairs it with the separate P04 rollback result; these were not one cloud failure-to-alert-to-recovery experiment.
 
 ---
 
-## 5. Handoff to P04
+## 5. Deployment integration notes
 
-- **Person 2 (Backend and Deployment):**
-  - `feedbackpulse:local` is ready. Use the `Dockerfile` and workflow to set up GitHub Actions CI/CD in P04.
-  - Manage `SERVICE_TOKEN`, `MODEL_DIR`, `MODEL_VERSION` through `cloud.env.example`.
+At this test date, `feedbackpulse:local` was the local image prepared for P04.
+The `Dockerfile` and workflow provide the build and release path.
+Configure `SERVICE_TOKEN`, `MODEL_DIR` and `MODEL_VERSION` using `cloud.env.example`.

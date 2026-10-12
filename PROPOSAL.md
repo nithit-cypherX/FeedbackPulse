@@ -1,6 +1,6 @@
-# FeedbackPulse — Capstone Proposal
+# FeedbackPulse — Project Proposal
 
-**Original proposal:** This records the initial scope, not today's task status. The later approved scope adds a localhost demo and uses existing failure/rollback evidence instead of a new P05 incident drill. See the [current overview](overview-plan.md) and [submission notes](README.md#submission-status-and-presentation-notes). The original plan below is kept for reference, not presented as completed experiments.
+**Original proposal:** This records the initial design and budget. The project later added a localhost demo and kept the P03 missing-model test and P04 rollback as separate experiments instead of running a new P05 incident drill. See the [overview](overview-plan.md) and [operational notes](README.md#operational-notes). Planned experiments below are not completed results.
 
 **Team:** 3D team 
 6688033 Jinnapat Jaiphoom
@@ -19,8 +19,8 @@ CRM integration are outside the scope.
 
 We will use a pinned revision of
 [CardiffNLP's Twitter RoBERTa sentiment model](https://huggingface.co/cardiffnlp/twitter-roberta-base-sentiment-latest),
-published under **CC BY 4.0**. Following the instructor's guidance on pretrained
-models, we will not train or fine-tune it.
+published under **CC BY 4.0**. We will use its pretrained weights without training
+or fine-tuning.
 
 [Twitter US Airline Sentiment](https://www.kaggle.com/datasets/crowdflower/twitter-airline-sentiment),
 version 4, under **CC BY-NC-SA 4.0**, will provide evaluation and demonstration
@@ -55,7 +55,7 @@ a one-page model card, and cost per 1,000 predictions.
 
 ## 5. Planned failure
 
-**Scope update — 11 October 2026:** The user canceled the new P05 failure/recovery experiment. The presentation uses the separate P03 missing-model test and P04 rollback evidence in the [failure story](README.md#failure-story-model-unavailable-and-rollback). The traffic alert tested request volume, not model-loading failure. The paragraph below is the original experiment plan.
+**Scope update — 11 October 2026:** The new P05 failure/recovery experiment was canceled. The [failure story](README.md#failure-story-model-unavailable-and-rollback) records the separate P03 missing-model test and P04 rollback. The traffic alert tested request volume, not model-loading failure. The paragraph below is the original experiment plan, not a test that was run.
 
 In a test deployment, we will make the model artifact unavailable. The service
 should fail its readiness check, avoid misleading predictions, and trigger an
